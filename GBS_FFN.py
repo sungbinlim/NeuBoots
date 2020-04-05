@@ -86,14 +86,14 @@ def Schedule(it0, lag1, lag):
 #############################################
 K0 = 10
 inc1 = 0.005 # 1.0 work good. Let's try 2.0
-a0 = 0.5#0/n_a#0.01
-lr0 = 0.02/np.sqrt(n)
+a0 = 1.0#0/n_a#0.01
+lr0 = 0.01/np.sqrt(n)
 
-k = 200
-hidden_size = 300
+k = 300
+hidden_size = 500
 
 nsub = int(sub_size*n_b)
-epoch = 3000#int(5000.0*float(n)/nsub)
+epoch = 2000#int(5000.0*float(n)/nsub)
 num_it = epoch
 ones = torch.ones(2,2).to(device)
 n1 = float(n)
