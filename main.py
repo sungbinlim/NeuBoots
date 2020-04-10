@@ -9,9 +9,11 @@ from model.cnn import ConvNet, D
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-loader = MnistLoader(500, 500, 8, 5)
+batch_size = 500
+n_a = 500
+cpus = 8
+loader = MnistLoader(batch_size, n_a, 8, 5)
 p = loader.p
-n_a = loader.n_a
 
 hidden_size = p // 2 if p // 2 >= 100 else 100
 lr_init = 0.01 / math.sqrt(loader.n_train)

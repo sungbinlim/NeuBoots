@@ -24,7 +24,7 @@ class _MNIST(MNIST):
 
 
 class MnistLoader(object):
-    def __init__(self, n_a, batch_size, cpus, n_block=-1, seed=0):
+    def __init__(self, n_a, batch_size, cpus, seed=0):
         self.n_a = n_a
         self.n_train = 50000
         self.n_val = 10000
@@ -33,7 +33,7 @@ class MnistLoader(object):
         self.n_b = self.n_train // n_a
         self.batch_size = batch_size
         self.cpus = cpus
-        self.n_block = n_block
+        self.sub_size = max(500 * n_a // self.n_train if self.n_train > 500 else n_a, 1)
         self.p = next(iter(self.load('train')))[0][0].nelement()
         # np.random.seed(seed)
         # np.random.shuffle(self.indices)
@@ -54,7 +54,7 @@ class MnistLoader(object):
         if self.n_block == -1:
             sampler = BlockSampler(self.indices[:50000], self.n_a)
         else:
-            sampler = BlockSubsetSampler(self.indices[:50000], self.n_a, self.n_block)
+            sampler = BlockSubsetSampler(self.indices[:50000], self.n_a, self.sub_size)
         loader = DataLoader(dataset, batch_size=self.batch_size,
                             sampler=sampler, num_workers=self.cpus,
                             pin_memory=True)

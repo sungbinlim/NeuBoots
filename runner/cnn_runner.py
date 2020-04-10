@@ -17,7 +17,7 @@ class GbsCnnClsfier(BaseRunner):
         super().__init__(loader, save_path, num_epoch, model, optim, lr_schdlr)
         n_train = loader.n_train
         n_a = loader.n_a
-        sub_size = max(500 * n_a // n_train if n_train > 500 else n_a, 1)
+        sub_size = loader.sub_size
         self.n_test = loader.n_test
         self.n_b = loader.n_b
         self.loss = loss
