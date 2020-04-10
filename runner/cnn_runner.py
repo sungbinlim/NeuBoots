@@ -16,9 +16,9 @@ class GbsCnnClsfier(BaseRunner):
     def __init__(self, loader, save_path, num_epoch, model, optim, lr_schdlr, loss, k0):
         super().__init__(loader, save_path, num_epoch, model, optim, lr_schdlr)
         n_train = loader.n_train
-        self.n_test = loader.n_test
         n_a = loader.n_a
         sub_size = max(500 * n_a // n_train if n_train > 500 else n_a, 1)
+        self.n_test = loader.n_test
         self.n_b = loader.n_b
         self.loss = loss
         self.a_sample = Exponential(torch.ones([1, sub_size]))
@@ -40,9 +40,9 @@ class GbsCnnClsfier(BaseRunner):
 
     def train(self):
         print("Start to train")
-        self.G.train()
         losses = []
         for epoch in range(self.epoch, self.num_epoch):
+            self.G.train()
             loss = 0
             for m in range(self.k0):
                 loader = self.loader.load('train')
@@ -52,7 +52,6 @@ class GbsCnnClsfier(BaseRunner):
                     output = self.G(img, w0, self.a0, self.fac1)
                     _loss = self.loss(output, label, w1) / self.k0
                     loss += _loss
-                # print(m, _loss.item())
 
             self.optim.zero_grad()
             loss.backward()
@@ -62,6 +61,8 @@ class GbsCnnClsfier(BaseRunner):
 
             if epoch % 50 == 20:
                 self.fac1 += self.inc1
+
+            if epoch % 100 == 0:
                 self.val(epoch)
 
     def val(self, epoch):

@@ -1,12 +1,6 @@
 import torch
-from torch.nn import DataParallel
-from torch.optim import lr_scheduler, Adam
-from torch.distributions.exponential import Exponential
-import numpy as np
 from pathlib import Path
 import shutil
-from tqdm import tqdm
-from random import sample
 
 
 class BaseRunner(object):
@@ -23,7 +17,7 @@ class BaseRunner(object):
 
     def save(self, epoch, metric, file_name="model"):
         save_path = Path(self.save_path)
-        save_path.mkdir(parents=True, exists_ok=True)
+        save_path.mkdir(parents=True, exist_ok=True)
 
         torch.save({"epoch": epoch,
                     "param": self.G.state_dict(),
@@ -31,15 +25,15 @@ class BaseRunner(object):
                     "score": metric,
                     "best": self.best_metric,
                     "lr_schdlr": self.lr_schler.state_dict()
-                    }, f"{save_path}/{file_name}.pth.tar")
+                    }, f"{save_path}/{file_name}.pth")
 
         if metric >= self.best_metric:
             print(f"{self.best_metric} -------------------> {metric}")
             self.best_metric = metric
-            shutil.copy2(f"{save_path}/{file_name}.pth.tar", f"{save_path}/best.pth.tar")
+            shutil.copy2(f"{save_path}/{file_name}.pth", f"{save_path}/best.pth")
             print(f"Model has saved at {epoch} epoch.")
 
-    def load(self, file_name="model.pth.tar"):
+    def load(self, file_name="model.pth"):
         save_path = Path(self.save_path)
         print(save_path)
         if (save_path / file_name).exists():

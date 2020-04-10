@@ -1,17 +1,13 @@
-import torch
 from torch.nn import DataParallel
 from torch.optim import lr_scheduler, Adam
-from torch.distributions.exponential import Exponential
-import numpy as np
 import math
-from pathlib import Path
+import os
 from data.mnist_loader import MnistLoader
-import shutil
-from tqdm import tqdm
-from random import sample
 from runner.cnn_runner import GbsCnnClsfier
 from model.cnn import ConvNet, D
 
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 loader = MnistLoader(500, 500, 8, 5)
 p = loader.p
@@ -24,7 +20,6 @@ print(hidden_size, lr_init)
 model = DataParallel(ConvNet(hidden_size, n_a, p)).cuda()
 optim = Adam(model.parameters(), lr=lr_init)
 lr_schdlr = lr_scheduler.ReduceLROnPlateau(optim, 'max', 0.2, 30)
-loss = D
 
-runner = GbsCnnClsfier(loader, 'outs/mnist', 25000, model, optim, lr_schdlr, loss, 5)
+runner = GbsCnnClsfier(loader, 'outs/mnist', 25000, model, optim, lr_schdlr, D, 5)
 runner.train()

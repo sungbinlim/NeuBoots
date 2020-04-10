@@ -20,7 +20,7 @@ class _MNIST(MNIST):
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        return img, target, index
+        return img / 255, target, index
 
 
 class MnistLoader(object):
