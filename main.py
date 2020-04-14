@@ -4,7 +4,7 @@ import math
 import os
 from data.mnist_loader import MnistLoader
 from runner.cnn_runner import GbsCnnClsfier
-from model.cnn import ConvNet, D
+from models.cnn import ConvNet, D
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
