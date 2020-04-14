@@ -40,30 +40,27 @@ class GbsCnnClsfier(BaseRunner):
 
     def train(self):
         print("Start to train")
-        losses = []
+        losses = 0
         for epoch in range(self.epoch, self.num_epoch):
             self.G.train()
-            loss = 0
-            for m in range(self.k0):
-                loader = self.loader.load('train')
-                for i, (img, label, index) in enumerate(loader):
-                    w0, w1 = self._get_weights(index)
-                    label = F.one_hot(label, 10).cuda()
-                    output = self.G(img, w0, self.a0, self.fac1)
-                    _loss = self.loss(output, label, w1) / self.k0
-                    loss += _loss
+            loader = self.loader.load("train")
+            t_iter = tqdm(loader, total=self.loader.len, desc=f"[Train {epoch}]")
 
-            self.optim.zero_grad()
-            loss.backward()
-            self.optim.step()
-            losses += [loss.item()]
-            print(f"Train {epoch} loss : {loss.item()}")
+            for i, (img, label, index) in enumerate(t_iter):
+                self.G.train()
+                w0, w1 = self._get_weights(index)
+                label = F.one_hot(label, 10).cuda()
+                output = self.G(img, w0, self.a0, self.fac1)
+                loss = self.loss(output, label, w1)
+                losses += loss.item()
 
-            if epoch % 50 == 20:
-                self.fac1 += self.inc1
+                self.optim.zero_grad()
+                loss.backward()
+                self.optim.step()
 
-            if epoch % 100 == 0:
-                self.val(epoch)
+                t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
+
+            self.val(epoch)
 
     def val(self, epoch):
         self.G.eval()

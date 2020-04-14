@@ -51,10 +51,8 @@ class MnistLoader(object):
     def _train(self):
         dataset = _MNIST(root='.mnist', train=True, download=True,
                          transform=transforms.ToTensor())
-        if self.n_block == -1:
-            sampler = BlockSampler(self.indices[:50000], self.n_a)
-        else:
-            sampler = BlockSubsetSampler(self.indices[:50000], self.n_a, self.sub_size)
+        self.len = int(self.n_train / self.batch_size)
+        sampler = BlockSampler(self.indices[:50000], self.n_a)
         loader = DataLoader(dataset, batch_size=self.batch_size,
                             sampler=sampler, num_workers=self.cpus,
                             pin_memory=True)
