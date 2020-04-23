@@ -9,31 +9,38 @@ import shutil
 import math
 from tqdm import tqdm
 from random import sample
-from runner.base import BaseRunner
+#from runner.base import BaseRunner
 
 
 class GbsCnnClsfier(BaseRunner):
-    def __init__(self, loader, save_path, num_epoch, model, optim, lr_schdlr, loss, k0):
+    def __init__(self, loader, save_path, num_epoch, model, optim, lr_schdlr, loss, k0, V):
         super().__init__(loader, save_path, num_epoch, model, optim, lr_schdlr)
         n_train = loader.n_train
         n_a = loader.n_a
-        sub_size = loader.sub_size
+        self.V = V
+        self.sub_size = loader.sub_size
         self.n_test = loader.n_test
         self.n_b = loader.n_b
+        self.nsub = int(sub_size*self.n_b)
         self.loss = loss
-        self.a_sample = Exponential(torch.ones([1, sub_size]))
+        self.a_sample = Exponential(torch.ones([1, V]))
         self.A = torch.eye(sub_size).repeat_interleave(self.n_b, dim=0)
         self.A_total = torch.ones([n_a, 1])
         self.alpha = torch.ones([1, n_a])
         self.k0 = k0
-        self.a0 = 30.0 / math.sqrt(n_train)
-        self.inc1 = 10.0 / math.sqrt(n_train * loader.p)
-        self.fac1 = 1.0
+        #self.a0 = 30.0 / math.sqrt(n_train)
+        #self.inc1 = 10.0 / math.sqrt(n_train * loader.p)
+        self.fac1 = 5.0
         self.w_test = torch.ones([self.n_test, n_a]).cuda()
 
-    def _get_weights(self, index):
+    def _get_weights(self, index, V):
         idx_sampled = (index // self.n_b).unique()
-        self.alpha[:, idx_sampled] = self.a_sample.sample()
+        #self.alpha[:, idx_sampled] = self.a_sample.sample()
+        ind_a = sample(range(self.nsub), self.V)
+        for k in range(self.V):
+          ind_b = sample(range(n_a), self.V)
+          self.alpha[ind_a[k], idx_sampled] = self.a_sample.sample().cuda()
+        
         w0 = self.A_total @ self.alpha
         w1 = self.A @ self.alpha[:, idx_sampled].t()
         return w0.cuda(), w1.cuda()
@@ -47,17 +54,16 @@ class GbsCnnClsfier(BaseRunner):
             t_iter = tqdm(loader, total=self.loader.len, desc=f"[Train {epoch}]")
 
             for i, (img, label, index) in enumerate(t_iter):
+                lr_schdlr.step()
                 self.G.train()
-                w0, w1 = self._get_weights(index)
+                w0, w1 = self._get_weights(index, self.V)
                 label = F.one_hot(label, 10).cuda()
-                output = self.G(img, w0, self.a0, self.fac1)
+                output = self.G(img, w0, self.fac1)
                 loss = self.loss(output, label, w1)
                 losses += loss.item()
-
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
-
                 t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
 
             self.val(epoch)
