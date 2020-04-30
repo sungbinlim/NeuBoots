@@ -4,8 +4,8 @@ import shutil
 
 
 class BaseRunner(object):
-    def __init__(self, loader, save_path, num_epoch, model, optim, lr_schdlr):
-        self.save_path = save_path
+    def __init__(self, loader, inifile, num_epoch, model, optim, lr_schdlr):
+        self.save_path = f"outs/{inifile}"
         self.loader = loader
         self.num_epoch = num_epoch
         self.epoch = 0
@@ -30,7 +30,8 @@ class BaseRunner(object):
         if metric >= self.best_metric:
             print(f"{self.best_metric} -------------------> {metric}")
             self.best_metric = metric
-            shutil.copy2(f"{save_path}/{file_name}.pth", f"{save_path}/best.pth")
+            shutil.copy2(f"{save_path}/{file_name}.pth",
+                         f"{save_path}/best.pth")
             print(f"Model has saved at {epoch} epoch.")
 
     def load(self, file_name="model.pth"):
