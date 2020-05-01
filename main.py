@@ -37,9 +37,9 @@ def main():
     data_loader = MnistLoader(args.n_a, args.sub_size, args.cpus, args.v)
     p = data_loader.p
     model, optim = get_model_optim(args, p)
-    lr_schdlr = lr_scheduler.CyclicLR(optim, base_lr=0.000001,
-                                      max_lr=0.00001,
-                                      step_size_up=1000)
+    lr_schdlr = lr_scheduler.CyclicLR(optim, base_lr=args.lr,
+                                      max_lr=args.lr_max,
+                                      step_size_up=2000)
     loss_fn = D
 
     runner = GbsCnnClsfier(data_loader, args.inifile, args.num_epoch,
@@ -54,9 +54,8 @@ def main():
 
 def get_model_optim(args, p):
     hidden_size = p if p >= 100 else 100
-    # model = eval(args.model)(hidden_size, args.n_a).cuda()
-    # model = gbs_lenet(hidden_size, args.n_a).cuda()
-    model = _get_model(args.model, hidden_size, args.n_a).cuda()
+    model = _get_model(args.model, hidden_size, args.n_a,
+                       args.num_layer, args.num_classes).cuda()
     if args.optim == 'adam':
         Optim = Adam
     elif args.optim == 'rmsp':

@@ -49,3 +49,7 @@ class ConvNet(nn.Module):
         out0 = self.fc_out(out0)
         out0 = self.soft(out0)
         return out0
+
+
+def lenet():
+    return ConvNet(100, 500, 10)
