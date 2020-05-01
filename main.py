@@ -42,9 +42,7 @@ def main():
                                       step_size_up=2000)
     loss_fn = D
 
-    runner = GbsCnnClsfier(data_loader, args.inifile, args.num_epoch,
-                           model, optim, lr_schdlr, loss_fn, args.k0,
-                           args.v, args.num_bs)
+    runner = GbsCnnClsfier(args, data_loader, model, optim, lr_schdlr, loss_fn)
     if args.phase == 'train':
         runner.train()
         runner.test()

@@ -2,12 +2,16 @@ import torch
 from pathlib import Path
 import shutil
 
+from utils.logger import Logger
+
 
 class BaseRunner(object):
-    def __init__(self, loader, inifile, num_epoch, model, optim, lr_schdlr):
-        self.save_path = f"outs/{inifile}"
+    def __init__(self, args, loader, model, optim, lr_schdlr):
+        self.save_path = f"outs/{args.inifile}"
+        Path(self.save_path).mkdir(parents=True, exist_ok=True)
+        self.logger = Logger(args, self.save_path)
         self.loader = loader
-        self.num_epoch = num_epoch
+        self.num_epoch = args.num_epoch
         self.epoch = 0
         self.G = model
         self.optim = optim

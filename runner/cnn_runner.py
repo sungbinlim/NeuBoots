@@ -10,24 +10,22 @@ from runner.base import BaseRunner
 
 
 class GbsCnnClsfier(BaseRunner):
-    def __init__(self, loader, save_path, num_epoch,
-                 model, optim, lr_schdlr, loss, k0, V, num_bs):
+    def __init__(self, args, loader, model, optim, lr_schdlr, loss):
         self.n_a = loader.n_a
-        self.V = V
+        self.V = args.v
         self.sub_size = loader.sub_size
         self.n_test = loader.n_test
         self.n_b = loader.n_b
         self.nsub = int(self.sub_size * self.n_b)
         self.loss = loss
-        self.a_sample = Exponential(torch.ones([1, V]))
+        self.a_sample = Exponential(torch.ones([1, self.V]))
         self.a_test = Exponential(torch.ones([1, self.n_a]))
         self.A = torch.eye(self.sub_size).repeat_interleave(self.n_b, 0).t()
         self.alpha = torch.ones([self.nsub, self.n_a])
-        self.k0 = k0
+        self.k0 = args.k0
         self.fac1 = 5.0
-        self.num_bs = num_bs
-        super().__init__(loader, save_path, num_epoch, model, optim, lr_schdlr)
-        print(self.alpha.sum())
+        self.num_bs = args.num_bs
+        super().__init__(args, loader, model, optim, lr_schdlr)
 
     def _get_weight(self, index, V):
         idx_sampled = sample(range(self.n_a), self.sub_size)
@@ -61,6 +59,8 @@ class GbsCnnClsfier(BaseRunner):
                 t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
                 self.lr_schdlr.step()
 
+            self.logger.will_write(f"[Train] epoch:{epoch} loss:{losses/i}",
+                                   is_print=False)
             self.val(epoch)
 
     def val(self, epoch):
@@ -76,7 +76,7 @@ class GbsCnnClsfier(BaseRunner):
                 acc += _acc
             acc /= self.n_test
             self.save(epoch, acc, alpha=self.alpha)
-            print(f"Val {epoch} acc : {acc}")
+            self.logger.will_write(f"[Val] {epoch} acc : {acc}")
 
     def test(self):
         self.G.eval()
@@ -95,5 +95,5 @@ class GbsCnnClsfier(BaseRunner):
             pred = outputs.sum(0)[:, :-1].argmax(1)
             label = outputs[0][:, -1]
             acc = pred == label
-            print(f"Test acc : {acc.mean()}")
+            self.logger.will_write(f"[Test] acc : {acc.mean()}")
             np.save(f"{self.save_path}/output.npy", outputs)
