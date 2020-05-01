@@ -12,7 +12,6 @@ from runner.base import BaseRunner
 class GbsCnnClsfier(BaseRunner):
     def __init__(self, loader, save_path, num_epoch,
                  model, optim, lr_schdlr, loss, k0, V, num_bs):
-        super().__init__(loader, save_path, num_epoch, model, optim, lr_schdlr)
         self.n_a = loader.n_a
         self.V = V
         self.sub_size = loader.sub_size
@@ -27,6 +26,8 @@ class GbsCnnClsfier(BaseRunner):
         self.k0 = k0
         self.fac1 = 5.0
         self.num_bs = num_bs
+        super().__init__(loader, save_path, num_epoch, model, optim, lr_schdlr)
+        print(self.alpha.sum())
 
     def _get_weight(self, index, V):
         idx_sampled = sample(range(self.n_a), self.sub_size)
@@ -52,12 +53,13 @@ class GbsCnnClsfier(BaseRunner):
                 w1 = self._get_weight(index, self.V)[:batch, :batch]
                 label = F.one_hot(label, 10).cuda()
                 output = self.G(img, self.alpha[:batch], self.fac1)
-                loss = self.loss(output, label, w1) / self.nsub
+                loss = self.loss(output, label, w1)  # / self.nsub
                 losses += loss.item()
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
                 t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
+                self.lr_schdlr.step()
 
             self.val(epoch)
 
@@ -73,8 +75,7 @@ class GbsCnnClsfier(BaseRunner):
                 _acc = (pred == label).sum().float()
                 acc += _acc
             acc /= self.n_test
-            self.save(epoch, acc)
-            self.lr_schler.step()
+            self.save(epoch, acc, alpha=self.alpha)
             print(f"Val {epoch} acc : {acc}")
 
     def test(self):
