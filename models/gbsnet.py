@@ -60,7 +60,7 @@ def gbs_conv(backbone, return_layer, classifier):
     return model
 
 
-def D(Prob, y1, w1, reduce='mean'):
+def D(Prob, y1, w1, reduce='sum'):
     out = -1.0 * y1 * torch.log(Prob)
     if reduce == 'mean':
         out = out.mean(1).view([-1, 1])

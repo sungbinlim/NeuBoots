@@ -51,7 +51,7 @@ class GbsCnnClsfier(BaseRunner):
                 w1 = self._get_weight(index, self.V)[:batch, :batch]
                 label = F.one_hot(label, 10).cuda()
                 output = self.G(img, self.alpha[:batch], self.fac1)
-                loss = self.loss(output, label, w1)  # / self.nsub
+                loss = self.loss(output, label, w1) / self.nsub
                 losses += loss.item()
                 self.optim.zero_grad()
                 loss.backward()
@@ -59,8 +59,7 @@ class GbsCnnClsfier(BaseRunner):
                 t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
                 self.lr_schdlr.step()
 
-            self.logger.will_write(f"[Train] epoch:{epoch} loss:{losses/i}",
-                                   is_print=False)
+            self.logger.write(f"[Train] epoch:{epoch} loss:{losses/i}")
             self.val(epoch)
 
     def val(self, epoch):
@@ -76,7 +75,7 @@ class GbsCnnClsfier(BaseRunner):
                 acc += _acc
             acc /= self.n_test
             self.save(epoch, acc, alpha=self.alpha)
-            self.logger.will_write(f"[Val] {epoch} acc : {acc}")
+            self.logger.write(f"[Val] {epoch} acc : {acc}")
 
     def test(self):
         self.G.eval()
@@ -95,5 +94,5 @@ class GbsCnnClsfier(BaseRunner):
             pred = outputs.sum(0)[:, :-1].argmax(1)
             label = outputs[0][:, -1]
             acc = pred == label
-            self.logger.will_write(f"[Test] acc : {acc.mean()}")
+            self.logger.write(f"[Test] acc : {acc.mean()}")
             np.save(f"{self.save_path}/output.npy", outputs)
