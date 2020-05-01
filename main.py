@@ -9,7 +9,9 @@ import argparse
 
 from data.mnist_loader import MnistLoader
 from runner.cnn_runner import GbsCnnClsfier
-from models.cnn import ConvNet, D
+from models.gbsnet import D
+from models import _get_model
+
 from utils.arg_parser import parse_args
 
 
@@ -52,7 +54,9 @@ def main():
 
 def get_model_optim(args, p):
     hidden_size = p if p >= 100 else 100
-    model = eval(args.model)(hidden_size, args.n_a, p).cuda()
+    # model = eval(args.model)(hidden_size, args.n_a).cuda()
+    # model = gbs_lenet(hidden_size, args.n_a).cuda()
+    model = _get_model(args.model, hidden_size, args.n_a).cuda()
     if args.optim == 'adam':
         Optim = Adam
     elif args.optim == 'rmsp':

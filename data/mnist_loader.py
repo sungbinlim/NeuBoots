@@ -24,7 +24,7 @@ class _MNIST(MNIST):
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        return img / 255, target, index
+        return img.repeat_interleave(3, dim=0) / 255, target, index
 
 
 class MnistLoader(object):
@@ -37,6 +37,7 @@ class MnistLoader(object):
         self.indices = list(range(60000))
         self.n_b = self.n_train // n_a
         self.batch_size = self.n_b*self.sub_size
+        # self.batch_size = 512
         self.cpus = cpus
         self.p = next(iter(self.load('train')))[0][0].nelement()
         # np.random.seed(seed)

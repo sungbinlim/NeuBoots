@@ -3,10 +3,10 @@ from torch import nn
 
 
 class ConvNet(nn.Module):
-    def __init__(self, hidden_size, n_a, p, num_classes=10):
+    def __init__(self, hidden_size, n_a, num_classes=10):
         super(ConvNet, self).__init__()
         self.layer1 = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=7, stride=1, padding=2),
+            nn.Conv2d(3, 32, kernel_size=7, stride=1, padding=2),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2)
@@ -49,10 +49,3 @@ class ConvNet(nn.Module):
         out0 = self.fc_out(out0)
         out0 = self.soft(out0)
         return out0
-
-
-def D(Prob, y1, w1):
-    out = -1.0 * y1 * torch.log(Prob)
-    out = out.sum(1).view([-1, 1])
-    out = out * w1
-    return out.sum()

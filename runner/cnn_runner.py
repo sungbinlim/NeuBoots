@@ -45,13 +45,13 @@ class GbsCnnClsfier(BaseRunner):
             loader = self.loader.load("train")
             t_iter = tqdm(loader, total=self.loader.len,
                           desc=f"[Train {epoch}]")
-
             losses = 0
             for i, (img, label, index) in enumerate(t_iter):
                 self.G.train()
-                w1 = self._get_weight(index, self.V)
+                batch = img.size(0)
+                w1 = self._get_weight(index, self.V)[:batch, :batch]
                 label = F.one_hot(label, 10).cuda()
-                output = self.G(img, self.alpha, self.fac1)
+                output = self.G(img, self.alpha[:batch], self.fac1)
                 loss = self.loss(output, label, w1) / self.nsub
                 losses += loss.item()
                 self.optim.zero_grad()
