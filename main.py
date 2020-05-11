@@ -39,7 +39,7 @@ def main():
     model, optim = get_model_optim(args, p)
     lr_schdlr = lr_scheduler.CyclicLR(optim, base_lr=args.lr,
                                       max_lr=args.lr_max,
-                                      step_size_up=2000)
+                                      step_size_up=1000)
     loss_fn = D
 
     runner = GbsCnnClsfier(args, data_loader, model, optim, lr_schdlr, loss_fn)

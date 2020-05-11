@@ -27,6 +27,7 @@ class _MNIST(MNIST):
         return img.repeat_interleave(3, dim=0) / 255, target, index
 
 
+# TODO : should be generalized
 class MnistLoader(object):
     def __init__(self, n_a, sub_size, cpus, seed=0):
         self.sub_size = sub_size

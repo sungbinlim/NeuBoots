@@ -29,8 +29,8 @@ class GbsCnnClsfier(BaseRunner):
 
     def _get_weight(self, index, V):
         idx_sampled = sample(range(self.n_a), self.sub_size)
-        ind_a = sample(range(self.nsub), self.V)
-        for k in range(self.V):
+        ind_a = sample(range(self.nsub), 2*self.V)
+        for k in range(2*self.V):
             ind_b = sample(range(self.n_a), self.V)
             self.alpha[ind_a[k], ind_b] = self.a_sample.sample()
 
