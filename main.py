@@ -34,7 +34,8 @@ def main():
         torch.cuda.set_device(cmd_args.local_rank)
         dist.init_process_group(backend='nccl', init_method='env://')
 
-    data_loader = MnistLoader(args.n_a, args.sub_size, args.cpus, args.v)
+    data_loader = MnistLoader(args.batch_size, args.n_a, args.sub_size,
+                              args.cpus, args.v)
     p = data_loader.p
     model, optim = get_model_optim(args, p)
     lr_schdlr = lr_scheduler.CyclicLR(optim, base_lr=args.lr,

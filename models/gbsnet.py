@@ -30,9 +30,8 @@ class GbsCls(nn.Module):
 
     def forward(self, x, w, fac1):
         out = x
-        out2 = fac1 * torch.exp(-1.0*w)
+        out2 = fac1 * torch.exp(-1.0 * w)
         for i, layer in enumerate(self.fc_layers):
-            # print(out.shape, out2.shape)
             out = layer(torch.cat([out, out2], dim=1))
         return self.fc_out(out).softmax(1)
 

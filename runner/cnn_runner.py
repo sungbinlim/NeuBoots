@@ -5,6 +5,8 @@ from torch.distributions.exponential import Exponential
 import numpy as np
 from tqdm import tqdm
 from random import sample
+from math import ceil
+from itertools import cycle
 
 from runner.base import BaseRunner
 
@@ -27,15 +29,24 @@ class GbsCnnClsfier(BaseRunner):
         self.num_bs = args.num_bs
         super().__init__(args, loader, model, optim, lr_schdlr)
 
-    def _get_weight(self, index, V):
+    def _get_weight(self, batch):
         idx_sampled = sample(range(self.n_a), self.sub_size)
-        ind_a = sample(range(self.nsub), 2*self.V)
-        for k in range(2*self.V):
+        ind_a = sample(range(self.nsub), ceil(batch / self.nsub * 2 * self.V))
+        for k in range(ceil(batch / self.nsub * 2 * self.V)):
             ind_b = sample(range(self.n_a), self.V)
             self.alpha[ind_a[k], ind_b] = self.a_sample.sample()
 
         w1 = self.alpha[:, idx_sampled] @ self.A
         return w1.t().cuda()
+
+    def _get_indices(self, start, end):
+        indices = []
+        for _, idx in enumerate(cycle(range(self.nsub))):
+            if start <= _ < end:
+                indices += [idx]
+            if _ >= end:
+                break
+        return indices
 
     def train(self):
         print("Start to train")
@@ -45,17 +56,23 @@ class GbsCnnClsfier(BaseRunner):
             t_iter = tqdm(loader, total=self.loader.len,
                           desc=f"[Train {epoch}]")
             losses = 0
+            start = 0
             for i, (img, label, index) in enumerate(t_iter):
                 self.G.train()
                 batch = img.size(0)
-                w1 = self._get_weight(index, self.V)[:batch, :batch]
+                end = start + batch
+                indices = self._get_indices(start, end)
+                start = end % self.nsub
+
+                w1 = self._get_weight(batch)[indices]
                 label = F.one_hot(label, 10).cuda()
-                output = self.G(img, self.alpha[:batch], self.fac1)
-                loss = self.loss(output, label, w1) / self.nsub
+                output = self.G(img, self.alpha[indices], self.fac1)
+                loss = self.loss(output, label, w1) / batch
                 losses += loss.item()
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
+
                 t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
                 self.lr_schdlr.step()
 
