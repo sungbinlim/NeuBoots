@@ -4,7 +4,7 @@ from .gbsnet import gbs_conv, GbsCls
 from torchvision import models
 
 
-MODEL_DICT = {'lenet': [lenet, 'layer2', 5*5*64],
+MODEL_DICT = {'lenet': [lenet, 'layer2', 6*6*64],
               'alexnet': [models.alexnet, 'avgpool', 256*6*6],
               'resnet50': [models.resnet50, 'avgpool', 2048],
               'squeeze1_0': [models.squeezenet1_0, 'features', 512],

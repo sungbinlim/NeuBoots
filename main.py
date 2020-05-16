@@ -1,14 +1,15 @@
 import torch
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
-from torch.optim import lr_scheduler, Adam, RMSprop
+from torch.optim import lr_scheduler, Adam, RMSprop, SGD
 import torch.distributed as dist
 
 import os
 import argparse
 
 from data.mnist_loader import MnistLoader
-from runner.cnn_runner import GbsCnnClsfier
+from data.cifar_loader import Cifar10Loader
+from runner.gbs_runner import GbsCnnClsfier
 from models.gbsnet import D
 from models import _get_model
 
@@ -34,8 +35,9 @@ def main():
         torch.cuda.set_device(cmd_args.local_rank)
         dist.init_process_group(backend='nccl', init_method='env://')
 
-    data_loader = MnistLoader(args.batch_size, args.n_a, args.sub_size,
-                              args.cpus, args.v)
+    # data_loader = MnistLoader(args.batch_size, args.n_a, args.sub_size,
+    data_loader = Cifar10Loader(args.batch_size, args.n_a, args.sub_size,
+                                args.cpus, args.v)
     p = data_loader.p
     model, optim = get_model_optim(args, p)
     lr_schdlr = lr_scheduler.CyclicLR(optim, base_lr=args.lr,
@@ -59,8 +61,11 @@ def get_model_optim(args, p):
         Optim = Adam
     elif args.optim == 'rmsp':
         Optim = RMSprop
+    elif args.optim == 'sgd':
+        Optim = SGD
     optim = Optim(model.parameters(), lr=args.lr,
                   weight_decay=args.weight_decay)
+                #   nesterov=True, momentum=0.9)
 
     if args.dist:
         if args.apex:
