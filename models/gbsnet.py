@@ -1,7 +1,6 @@
 import math
 import torch
 from torch import nn
-from torchvision.models._utils import IntermediateLayerGetter
 
 from collections import OrderedDict
 
@@ -54,8 +53,7 @@ class GbsConvNet(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, x, w, fac1):
-        feat = self.backbone(x)
-        out = feat['out']
+        out = self.backbone(x)
         if out.size(-1) != 1:
             out = out.view(out.size(0), -1)
         else:
@@ -66,17 +64,31 @@ class GbsConvNet(nn.Module):
             return self.classifer(out)
 
 
+class BackboneGetter(nn.Sequential):
+    def __init__(self, model, return_layer):
+        if not set([return_layer]).issubset([name for name, _ in
+                                             model.named_children()]):
+            raise ValueError("return_layer is not present in model")
+
+        layers = OrderedDict()
+        for name, module in model.named_children():
+            layers[name] = module
+            if name == return_layer:
+                break
+
+        super().__init__(layers)
+
+
 def gbs_conv(backbone, return_layer, classifier, is_gbs):
-    layer_dict = {return_layer: 'out'}
-    backbone = IntermediateLayerGetter(backbone(), layer_dict)
+    backbone = BackboneGetter(backbone(), return_layer)
     model = GbsConvNet(backbone, classifier, is_gbs)
     return model
 
 
-def D(Prob, y1, w1=None, reduce='sum'):
+def D(Prob, y1, w1=None, reduce='mean'):
     ce = torch.nn.CrossEntropyLoss(reduction='none')
     out = ce(Prob, y1)
-    if not w1:
+    if w1 is None:
         return out.mean()
     out = out[..., None] * w1
     if reduce == 'mean':

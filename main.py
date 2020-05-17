@@ -1,19 +1,18 @@
+import os
 import torch
+import argparse
+
+import torch.distributed as dist
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 from torch.optim import lr_scheduler, Adam, RMSprop, SGD
-import torch.distributed as dist
 
-import os
-import argparse
-
+from models.gbsnet import D
+from models import _get_model
+from utils.arg_parser import parse_args
 from data.mnist_loader import MnistLoader
 from data.cifar_loader import Cifar10Loader
 from runner.gbs_runner import GbsCnnClsfier
-from models.gbsnet import D
-from models import _get_model
-
-from utils.arg_parser import parse_args
 
 
 def main():
@@ -35,16 +34,16 @@ def main():
         torch.cuda.set_device(cmd_args.local_rank)
         dist.init_process_group(backend='nccl', init_method='env://')
 
-    # data_loader = MnistLoader(args.batch_size, args.n_a, args.sub_size,
     data_loader = Cifar10Loader(args.batch_size, args.n_a, args.sub_size,
                                 args.cpus, args.v)
     p = data_loader.p
     model, optim = get_model_optim(args, p)
+    lr_schdlr = lr_scheduler.MultiStepLR(optim, [30, 80, 120, 180], 0.2)
     # lr_schdlr = lr_scheduler.CyclicLR(optim, base_lr=args.lr,
                                     #   max_lr=args.lr_max,
                                     #   step_size_up=1000)
-    lr_schdlr = lr_scheduler.CosineAnnealingWarmRestarts(optim, args.t_0,
-                                                         args.t_mul, 0)
+    # lr_schdlr = lr_scheduler.CosineAnnealingWarmRestarts(optim, args.t_0,
+                                                        #  args.t_mul, 0)
     # lr_schdlr = lr_scheduler.CosineAnnealingLR(optim, args.num_epoch, 0.)
     loss_fn = D
 
@@ -67,8 +66,8 @@ def get_model_optim(args, p):
     elif args.optim == 'sgd':
         Optim = SGD
     optim = Optim(model.parameters(), lr=args.lr,
-                  weight_decay=args.weight_decay)
-                #   nesterov=True, momentum=0.9)
+                  weight_decay=args.weight_decay,
+                  nesterov=True, momentum=0.9)
 
     if args.dist:
         if args.apex:
