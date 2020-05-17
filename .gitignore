@@ -1,0 +1,8 @@
+*.pt
+.*
+*.pyc
+*.pth
+__pycache__
+*/__pycache__
+outs
+*.ini
