@@ -10,7 +10,17 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from data.block_sampler import BlockSampler, BlockSubsetSampler
 
 
-_CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+transform_train = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+])
+
+transform_test = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+])
 
 
 class _CIFAR10(CIFAR10):
@@ -25,8 +35,6 @@ class _CIFAR10(CIFAR10):
 
         if self.transform is not None:
             img = self.transform(img)
-        _norm = transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD)
-        img = _norm(img)
         if self.target_transform is not None:
             target = self.target_transform(target)
 
@@ -39,9 +47,9 @@ class Cifar10Loader(object):
         self.sub_size = sub_size
         self.n_a = n_a
         self.trainset = _CIFAR10(root='.cifar10', train=True, download=True,
-                                 transform=transforms.ToTensor())
+                                 transform=transform_train)
         self.testset = _CIFAR10(root='.cifar10', train=False, download=True,
-                                transform=transforms.ToTensor())
+                                transform=transform_test)
         self.p = self.trainset[0][0].nelement()
         train_targets = [label for img, label, idx in self.trainset]
         splitter = StratifiedShuffleSplit(1, test_size=0.2, random_state=0)
