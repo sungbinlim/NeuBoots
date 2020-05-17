@@ -22,18 +22,19 @@ class GbsCls(nn.Module):
     def __init__(self, in_feat, hidden_size, num_layer, n_a, num_classes):
         super().__init__()
         self.fc_layers = nn.ModuleList()
+        in_feat += n_a
         for i in range(num_layer):
-            fc = LinearActBn(in_feat + n_a, hidden_size)
+            fc = LinearActBn(in_feat, hidden_size)
             self.fc_layers.append(fc)
-            in_feat = hidden_size
-        self.fc_out = nn.Linear(hidden_size, num_classes)
+            in_feat = hidden_size + n_a
+        self.fc_out = nn.Linear(in_feat, num_classes)
 
     def forward(self, x, w, fac1):
         out = x
         out2 = fac1 * torch.exp(-1.0 * w)
         for i, layer in enumerate(self.fc_layers):
             out = layer(torch.cat([out, out2], dim=1))
-        return self.fc_out(out)
+        return self.fc_out(torch.cat([out, out2], dim=1))
 
 
 class GbsConvNet(nn.Module):
