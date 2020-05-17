@@ -1,14 +1,16 @@
-from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision import transforms
 from torch.utils.data import DataLoader
+from torchvision.datasets import CIFAR10, CIFAR100
 from torch.utils.data.sampler import SubsetRandomSampler
 
 from PIL import Image
 from math import ceil
 from sklearn.model_selection import StratifiedShuffleSplit
 
-
 from data.block_sampler import BlockSampler, BlockSubsetSampler
+
+
+_CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
 
 
 class _CIFAR10(CIFAR10):
@@ -23,7 +25,8 @@ class _CIFAR10(CIFAR10):
 
         if self.transform is not None:
             img = self.transform(img)
-
+        _norm = transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD)
+        img = _norm(img)
         if self.target_transform is not None:
             target = self.target_transform(target)
 
