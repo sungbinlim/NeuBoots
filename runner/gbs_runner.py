@@ -57,27 +57,26 @@ class GbsCnnClsfier(BaseRunner):
                           desc=f"[Train {epoch}]")
             losses = 0
             start = 0
-            with torch.autograd.detect_anomaly():
-                for i, (img, label, index) in enumerate(t_iter):
-                    self.G.train()
-                    batch = img.size(0)
-                    end = start + batch
-                    indices = self._get_indices(start, end)
-                    start = end % self.nsub
+            for i, (img, label, index) in enumerate(t_iter):
+                self.G.train()
+                batch = img.size(0)
+                end = start + batch
+                indices = self._get_indices(start, end)
+                start = end % self.nsub
 
-                    w1 = self._get_weight(batch)[indices]
-                    output = self.G(img, self.alpha[indices], self.fac1)
-                    loss = self.loss(output, label.cuda(), w1) / batch
-                    losses += loss.item()
-                    self.optim.zero_grad()
-                    loss.backward()
-                    self.optim.step()
+                w1 = self._get_weight(batch)[indices]
+                output = self.G(img, self.alpha[indices], self.fac1)
+                loss = self.loss(output, label.cuda(), w1) / batch
+                losses += loss.item()
+                self.optim.zero_grad()
+                loss.backward()
+                self.optim.step()
 
-                    t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
+                t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
 
             self.logger.write(f"[Train] epoch:{epoch} loss:{losses/i}")
             self.val(epoch)
-            self.lr_schdlr.step()
+            self.lr_schdlr.step(epoch)
 
     def val(self, epoch):
         self.G.eval()
