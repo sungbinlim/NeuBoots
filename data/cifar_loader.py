@@ -44,7 +44,7 @@ class Cifar10Loader(object):
                                 transform=transforms.ToTensor())
         self.p = self.trainset[0][0].nelement()
         train_targets = [label for img, label, idx in self.trainset]
-        splitter = StratifiedShuffleSplit(1, 0.2, random_state=0)
+        splitter = StratifiedShuffleSplit(1, test_size=0.2, random_state=0)
         indices = range(len(self.trainset))
         self.indices = next(splitter.split(indices, train_targets))
 
