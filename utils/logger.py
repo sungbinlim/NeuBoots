@@ -17,7 +17,7 @@ class Logger:
                     f.write(log_string)
                 f.write("args end\n")
 
-    def will_write(self, line, is_print=True):
+    def will_write(self, line, is_print=False):
         if is_print:
             print(line)
         self.lines.append(line)
