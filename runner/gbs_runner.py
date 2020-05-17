@@ -74,10 +74,10 @@ class GbsCnnClsfier(BaseRunner):
                     self.optim.step()
 
                     t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
-                    self.lr_schdlr.step()
 
             self.logger.write(f"[Train] epoch:{epoch} loss:{losses/i}")
             self.val(epoch)
+            self.lr_schdlr.step()
 
     def val(self, epoch):
         self.G.eval()
