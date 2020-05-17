@@ -25,7 +25,7 @@ class GbsCnnClsfier(BaseRunner):
         self.A = torch.eye(self.sub_size).repeat_interleave(self.n_b, 0).t()
         self.alpha = torch.ones([self.nsub, self.n_a])
         self.k0 = args.k0
-        self.fac1 = 5.0
+        self.fac1 = args.fac1
         self.num_bs = args.num_bs
         super().__init__(args, loader, model, optim, lr_schdlr)
 
