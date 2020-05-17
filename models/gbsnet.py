@@ -33,7 +33,7 @@ class GbsCls(nn.Module):
         out2 = fac1 * torch.exp(-1.0 * w)
         for i, layer in enumerate(self.fc_layers):
             out = layer(torch.cat([out, out2], dim=1))
-        return self.fc_out(out).softmax(1)
+        return self.fc_out(out)
 
 
 class GbsConvNet(nn.Module):
@@ -60,12 +60,9 @@ def gbs_conv(backbone, return_layer, classifier):
 
 
 def D(Prob, y1, w1, reduce='sum'):
-    out = -1.0 * y1 * torch.log(Prob)
-    if reduce == 'mean':
-        out = out.mean(1).view([-1, 1])
-    else:
-        out = out.sum(1).view([-1, 1])
-    out = out * w1
+    ce = torch.nn.CrossEntropyLoss(reduction='none')
+    out = ce(Prob, y1)
+    out = out[..., None] * w1
     if reduce == 'mean':
         return out.mean()
     else:

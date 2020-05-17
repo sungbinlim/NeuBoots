@@ -66,9 +66,8 @@ class GbsCnnClsfier(BaseRunner):
                     start = end % self.nsub
 
                     w1 = self._get_weight(batch)[indices]
-                    label = F.one_hot(label, 10).cuda()
                     output = self.G(img, self.alpha[indices], self.fac1)
-                    loss = self.loss(output.softmax(1), label, w1) / batch
+                    loss = self.loss(output, label.cuda(), w1) / batch
                     losses += loss.item()
                     self.optim.zero_grad()
                     loss.backward()
