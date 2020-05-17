@@ -1,3 +1,4 @@
+import math
 import torch
 from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
@@ -38,10 +39,19 @@ class GbsCls(nn.Module):
 
 
 class GbsConvNet(nn.Module):
-    def __init__(self, backbone, classifier):
+    def __init__(self, backbone, classifier, is_gbs):
         super().__init__()
         self.backbone = backbone
         self.classifer = classifier
+        self.is_gbs = is_gbs
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
 
     def forward(self, x, w, fac1):
         feat = self.backbone(x)
@@ -50,19 +60,24 @@ class GbsConvNet(nn.Module):
             out = out.view(out.size(0), -1)
         else:
             out = out.squeeze()
-        return self.classifer(out, w, fac1)
+        if self.is_gbs:
+            return self.classifer(out, w, fac1)
+        else:
+            return self.classifer(out)
 
 
-def gbs_conv(backbone, return_layer, classifier):
+def gbs_conv(backbone, return_layer, classifier, is_gbs):
     layer_dict = {return_layer: 'out'}
     backbone = IntermediateLayerGetter(backbone(), layer_dict)
-    model = GbsConvNet(backbone, classifier)
+    model = GbsConvNet(backbone, classifier, is_gbs)
     return model
 
 
-def D(Prob, y1, w1, reduce='sum'):
+def D(Prob, y1, w1=None, reduce='sum'):
     ce = torch.nn.CrossEntropyLoss(reduction='none')
     out = ce(Prob, y1)
+    if not w1:
+        return out.mean()
     out = out[..., None] * w1
     if reduce == 'mean':
         return out.mean()

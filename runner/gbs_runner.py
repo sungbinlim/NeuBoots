@@ -27,6 +27,7 @@ class GbsCnnClsfier(BaseRunner):
         self.k0 = args.k0
         self.fac1 = args.fac1
         self.num_bs = args.num_bs
+        self.is_gbs = args.is_gbs
         super().__init__(args, loader, model, optim, lr_schdlr)
 
     def _get_weight(self, batch):
@@ -64,9 +65,12 @@ class GbsCnnClsfier(BaseRunner):
                 indices = self._get_indices(start, end)
                 start = end % self.nsub
 
-                w1 = self._get_weight(batch)[indices]
+                if self.is_gbs:
+                    w1 = self._get_weight(batch)[indices]
+                else:
+                    w1 = None
                 output = self.G(img, self.alpha[indices], self.fac1)
-                loss = self.loss(output, label.cuda(), w1) / batch
+                loss = self.loss(output, label.cuda(), w1)
                 losses += loss.item()
                 self.optim.zero_grad()
                 loss.backward()
@@ -76,7 +80,7 @@ class GbsCnnClsfier(BaseRunner):
 
             self.logger.write(f"[Train] epoch:{epoch} loss:{losses/i}")
             self.val(epoch)
-            self.lr_schdlr.step(epoch)
+            self.lr_schdlr.step()
 
     def val(self, epoch):
         self.G.eval()

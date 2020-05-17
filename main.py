@@ -45,6 +45,7 @@ def main():
                                     #   step_size_up=1000)
     lr_schdlr = lr_scheduler.CosineAnnealingWarmRestarts(optim, args.t_0,
                                                          args.t_mul, 0)
+    # lr_schdlr = lr_scheduler.CosineAnnealingLR(optim, args.num_epoch, 0.)
     loss_fn = D
 
     runner = GbsCnnClsfier(args, data_loader, model, optim, lr_schdlr, loss_fn)
@@ -57,8 +58,8 @@ def main():
 
 def get_model_optim(args, p):
     hidden_size = p if p >= 100 else 100
-    model = _get_model(args.model, hidden_size, args.n_a,
-                       args.num_layer, args.num_classes).cuda()
+    model = _get_model(args.model, hidden_size, args.n_a, args.num_layer,
+                       args.num_classes, args.is_gbs).cuda()
     if args.optim == 'adam':
         Optim = Adam
     elif args.optim == 'rmsp':
@@ -66,8 +67,8 @@ def get_model_optim(args, p):
     elif args.optim == 'sgd':
         Optim = SGD
     optim = Optim(model.parameters(), lr=args.lr,
-                  weight_decay=args.weight_decay,
-                  nesterov=True, momentum=0.9)
+                  weight_decay=args.weight_decay)
+                #   nesterov=True, momentum=0.9)
 
     if args.dist:
         if args.apex:

@@ -1,3 +1,4 @@
+import torch
 from .cnn import lenet
 from .gbsnet import gbs_conv, GbsCls
 
@@ -11,7 +12,11 @@ MODEL_DICT = {'lenet': [lenet, 'layer2', 6*6*64],
               'mnasnet0_5': [models.mnasnet0_5, 'layers', 1280]}
 
 
-def _get_model(model_name, hidden_size, n_a, num_layer, num_classes):
+def _get_model(model_name, hidden_size, n_a, num_layer,
+               num_classes, is_gbs=True):
     backbone, return_layer, in_feat = MODEL_DICT[model_name]
-    classifier = GbsCls(in_feat, hidden_size, num_layer, n_a, num_classes)
-    return gbs_conv(backbone, return_layer, classifier)
+    if is_gbs:
+        classifier = GbsCls(in_feat, hidden_size, num_layer, n_a, num_classes)
+    else:
+        classifier = torch.nn.Linear(in_feat, num_classes)
+    return gbs_conv(backbone, return_layer, classifier, is_gbs)
