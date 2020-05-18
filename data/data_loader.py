@@ -7,7 +7,7 @@ from math import ceil
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from data.block_sampler import BlockSampler, BlockSubsetSampler
-from utils.preprocessing import transform_train, transform_test
+from utils.preprocessing import get_transform, transform_test
 
 
 def _get_split_indices(trainset, p, seed):
@@ -73,8 +73,7 @@ class GbsDataLoader(object):
             return _dataset
         except:
             raise ValueError(
-                'Dataset should be one of [mnist, cifar10, cifar100, svhn]'
-                )
+                'Dataset should be one of [mnist, cifar10, cifar100, svhn]')
 
     def _load_mnist(self):
         trainset = MNIST(root='.mnist', train=True, download=True,
@@ -85,23 +84,23 @@ class GbsDataLoader(object):
 
     def _load_cifar10(self):
         trainset = CIFAR10(root='.cifar10', train=True, download=True,
-                           transform=transform_train)
+                           transform=get_transform(16))
         testset = CIFAR10(root='.cifar10', train=False, download=True,
                           transform=transform_test)
         return {'train': trainset, 'test': testset}
 
     def _load_cifar100(self):
         trainset = CIFAR100(root='.cifar100', train=True, download=True,
-                            transform=transform_train)
+                            transform=get_transform(8))
         testset = CIFAR100(root='.cifar100', train=False, download=True,
                            transform=transform_test)
         return {'train': trainset, 'test': testset}
 
     def _load_svhn(self, use_extra=False):
         trainset = SVHN(root='.svhn', split='train', download=True,
-                        transform=transform_train)
+                        transform=get_transform(20))
         extraset = SVHN(root='.svhn', split='extra', download=True,
-                        transform=transform_train)
+                        transform=get_transform(20))
         testset = SVHN(root='.svhn', split='test', download=True,
                        transform=transform_test)
         if use_extra:
