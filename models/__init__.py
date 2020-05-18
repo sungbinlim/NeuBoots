@@ -17,10 +17,10 @@ MODEL_DICT = {'lenet': [lenet, 'layer2', 6*6*64],
 
 
 def _get_model(model_name, hidden_size, n_a, num_layer,
-               num_classes, is_gbs=True):
+               num_classes, is_gbs=True, dropout_rate=0.):
     backbone, return_layer, in_feat = MODEL_DICT[model_name]
     if is_gbs:
         classifier = GbsCls(in_feat, hidden_size, num_layer, n_a, num_classes)
     else:
         classifier = torch.nn.Linear(in_feat, num_classes)
-    return gbs_conv(backbone, return_layer, classifier, is_gbs)
+    return gbs_conv(backbone, return_layer, classifier, is_gbs, dropout_rate)

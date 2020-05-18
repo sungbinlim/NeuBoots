@@ -79,8 +79,8 @@ class BackboneGetter(nn.Sequential):
         super().__init__(layers)
 
 
-def gbs_conv(backbone, return_layer, classifier, is_gbs):
-    backbone = BackboneGetter(backbone(), return_layer)
+def gbs_conv(backbone, return_layer, classifier, is_gbs, dropout_rate):
+    backbone = BackboneGetter(backbone(dropout_rate), return_layer)
     model = GbsConvNet(backbone, classifier, is_gbs)
     return model
 
