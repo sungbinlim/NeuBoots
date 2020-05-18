@@ -86,14 +86,14 @@ class GbsCnnClsfier(BaseRunner):
         self.G.eval()
         with torch.no_grad():
             loader = self.loader.load('val')
-            acc = 0.
+            acc = []
             for i, (img, label) in enumerate(loader):
                 w_test = torch.ones([img.shape[0], self.n_a]).cuda()
                 output = self.G(img, w_test, self.fac1)
                 pred = output.argmax(1).cpu()
-                _acc = (pred == label).sum().float()
-                acc += _acc
-            acc /= self.n_test
+                _acc = (pred == label).numpy()
+                acc += [_acc]
+            acc = np.concatenate(acc).mean()
             self.save(epoch, acc, alpha=self.alpha)
             self.logger.write(f"[Val] {epoch} acc : {acc}")
 
