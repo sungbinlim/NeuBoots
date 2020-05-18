@@ -1,57 +1,30 @@
-from torchvision import transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10, CIFAR100
 from torch.utils.data.sampler import SubsetRandomSampler
 
-from PIL import Image
 from math import ceil
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from data.block_sampler import BlockSampler, BlockSubsetSampler
+from utils.preprocessing import transform_train, transform_test
 
 
-transform_train = transforms.Compose([
-    transforms.RandomCrop(32, padding=4),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-])
-
-transform_test = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-])
-
-
-class _CIFAR10(CIFAR10):
-    def __init__(self, root, train=True, transform=None,
-                 target_transform=None, download=False):
-        super().__init__(root, train=train, transform=transform,
-                         target_transform=target_transform, download=download)
-
-    def __getitem__(self, index):
-        img, target = self.data[index], int(self.targets[index])
-        img = Image.fromarray(img)
-
-        if self.transform is not None:
-            img = self.transform(img)
-        if self.target_transform is not None:
-            target = self.target_transform(target)
-
-        return img, target, index
-
-
-# TODO : should be generalized
-class Cifar10Loader(object):
-    def __init__(self, batch_size, n_a, sub_size, cpus, seed=0):
+class CifarLoader(object):
+    def __init__(self, cifar_type, batch_size, n_a, sub_size, cpus, seed=0):
         self.sub_size = sub_size
         self.n_a = n_a
-        self.trainset = _CIFAR10(root='.cifar10', train=True, download=True,
-                                 transform=transform_train)
-        self.testset = _CIFAR10(root='.cifar10', train=False, download=True,
-                                transform=transform_test)
+        if cifar_type == 'cifar10':
+            self.trainset = CIFAR10(root='.cifar10', train=True, download=True,
+                                    transform=transform_train)
+            self.testset = CIFAR10(root='.cifar10', train=False, download=True,
+                                   transform=transform_test)
+        elif cifar_type == 'cifar100':
+            self.trainset = CIFAR100(root='.cifar100', train=True,
+                                     download=True, transform=transform_train)
+            self.testset = CIFAR100(root='.cifar100', train=False,
+                                    download=True, transform=transform_test)
         self.p = self.trainset[0][0].nelement()
-        train_targets = [label for img, label, idx in self.trainset]
+        train_targets = [label for img, label in self.trainset]
         splitter = StratifiedShuffleSplit(1, test_size=0.2, random_state=0)
         indices = range(len(self.trainset))
         self.indices = next(splitter.split(indices, train_targets))
@@ -63,13 +36,12 @@ class Cifar10Loader(object):
         self.batch_size = batch_size
         self.cpus = cpus
 
-
     def load(self, dataset):
-        _f = {'train': self._train(),
-              'val': self._val(),
-              'test': self._test()}
-        try:
-            loader = _f[dataset]
+        _f = {'train': lambda: self._train(),
+              'val': lambda: self._val(),
+              'test': lambda: self._test()}
+        try:  # lambda for lazy evaluation
+            loader = _f[dataset]()
             return loader
         except:
             raise ValueError('Dataset should be one of [train, val, test]')
@@ -94,12 +66,3 @@ class Cifar10Loader(object):
         loader = DataLoader(self.testset, batch_size=self.batch_size,
                             num_workers=self.cpus, pin_memory=True)
         return loader
-
-    def len(self, phase):
-        _l = {'train': 50000,
-              'val': 10000,
-              'test': 10000}
-        try:
-            return _l[phase]
-        except:
-            raise ValueError('Phase should be one of [train, val, test]')

@@ -58,7 +58,7 @@ class GbsCnnClsfier(BaseRunner):
                           desc=f"[Train {epoch}]")
             losses = 0
             start = 0
-            for i, (img, label, index) in enumerate(t_iter):
+            for i, (img, label) in enumerate(t_iter):
                 self.G.train()
                 batch = img.size(0)
                 end = start + batch
@@ -87,7 +87,7 @@ class GbsCnnClsfier(BaseRunner):
         with torch.no_grad():
             loader = self.loader.load('val')
             acc = 0.
-            for i, (img, label, index) in enumerate(loader):
+            for i, (img, label) in enumerate(loader):
                 w_test = torch.ones([img.shape[0], self.n_a]).cuda()
                 output = self.G(img, w_test, self.fac1)
                 pred = output.argmax(1).cpu()
@@ -104,7 +104,10 @@ class GbsCnnClsfier(BaseRunner):
             loader = self.loader.load('test')
             acc = 0.
             outputs = np.zeros([self.num_bs, self.n_test, 11])
-            for i, (img, label, index) in enumerate(loader):
+            beg = 0
+            for i, (img, label) in enumerate(loader):
+                index = list(range(beg, beg + img.size(0)))
+                beg = beg + img.size(0)
                 label = label.numpy().reshape(-1, 1)
                 for _ in range(self.num_bs):
                     w_test = a_test[_].repeat_interleave(img.shape[0], dim=0)
