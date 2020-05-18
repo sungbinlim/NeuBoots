@@ -7,7 +7,7 @@ from math import ceil
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from data.block_sampler import BlockSampler, BlockSubsetSampler
-from utils.preprocessing import get_transform, transform_test
+from utils.preprocessing import get_transform, transform_test, MnistNorm
 
 
 def _get_split_indices(trainset, p, seed):
@@ -77,9 +77,9 @@ class GbsDataLoader(object):
 
     def _load_mnist(self):
         trainset = MNIST(root='.mnist', train=True, download=True,
-                         transform=transforms.ToTensor())
+                         transform=MnistNorm())
         testset = MNIST(root='.mnist', train=False, download=True,
-                        transform=transforms.ToTensor())
+                        transform=MnistNorm())
         return {'train': trainset, 'test': testset}
 
     def _load_cifar10(self):

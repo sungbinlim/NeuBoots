@@ -1,7 +1,7 @@
 import numpy as np
 import torch
-
 from torchvision import transforms
+import torchvision.transforms.functional as F
 import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
 
 
@@ -44,6 +44,12 @@ class CutoutDefault(object):
         mask = torch.from_numpy(mask)
         mask = mask.expand_as(img)
         img *= mask
+        return img
+
+
+class MnistNorm(object):
+    def __call__(self, img):
+        img = F.to_tensor(img).repeat_interleave(3, dim=0)
         return img
 
 
