@@ -10,8 +10,7 @@ from torch.optim import lr_scheduler, Adam, RMSprop, SGD
 from models.gbsnet import D
 from models import _get_model
 from utils.arg_parser import parse_args
-from data.mnist_loader import MnistLoader
-from data.cifar_loader import CifarLoader
+from data.data_loader import GbsDataLoader
 from runner.gbs_runner import GbsCnnClsfier
 
 
@@ -34,8 +33,8 @@ def main():
         torch.cuda.set_device(cmd_args.local_rank)
         dist.init_process_group(backend='nccl', init_method='env://')
 
-    data_loader = CifarLoader('cifar10', args.batch_size, args.n_a,
-                              args.sub_size, args.cpus, args.v)
+    data_loader = GbsDataLoader(args.dataset, args.batch_size,
+                                args.n_a, args.sub_size, args.cpus)
     p = data_loader.p
     model, optim = get_model_optim(args, p)
     lr_schdlr = lr_scheduler.MultiStepLR(optim, [30, 80, 120, 180], 0.2)
