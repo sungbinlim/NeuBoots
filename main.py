@@ -37,13 +37,13 @@ def main():
                                 args.n_a, args.sub_size, args.cpus)
     p = data_loader.p
     model, optim = get_model_optim(args, p)
-    lr_schdlr = lr_scheduler.MultiStepLR(optim, [30, 80, 120, 180], 0.2)
+    # lr_schdlr = lr_scheduler.MultiStepLR(optim, [30, 80, 120, 180], 0.2)
     # lr_schdlr = lr_scheduler.CyclicLR(optim, base_lr=args.lr,
                                     #   max_lr=args.lr_max,
                                     #   step_size_up=1000)
     # lr_schdlr = lr_scheduler.CosineAnnealingWarmRestarts(optim, args.t_0,
                                                         #  args.t_mul, 0)
-    # lr_schdlr = lr_scheduler.CosineAnnealingLR(optim, args.num_epoch, 0.)
+    lr_schdlr = lr_scheduler.CosineAnnealingLR(optim, args.num_epoch, 0.)
     loss_fn = D
 
     runner = GbsCnnClsfier(args, data_loader, model, optim, lr_schdlr, loss_fn)
