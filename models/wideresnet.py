@@ -88,9 +88,9 @@ class WideResNet(nn.Module):
         return out
 
 
-def wresnet28_2():
-    return WideResNet(28, 2, 0., 10)
+def wresnet28_2(dropout_rate=0.):
+    return WideResNet(28, 2, dropout_rate, 10)
 
 
-def wresnet28_10():
-    return WideResNet(28, 10, 0., 10)
+def wresnet28_10(dropout_rate=0.):
+    return WideResNet(28, 10, dropout_rate, 10)

@@ -57,7 +57,7 @@ def main():
 def get_model_optim(args, p):
     hidden_size = p if p >= 100 else 100
     model = _get_model(args.model, hidden_size, args.n_a, args.num_layer,
-                       args.num_classes, args.is_gbs).cuda()
+                       args.num_classes, args.is_gbs, args.dropout_rate).cuda()
     if args.optim == 'adam':
         Optim = Adam
     elif args.optim == 'rmsp':
