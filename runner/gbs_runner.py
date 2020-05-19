@@ -28,6 +28,7 @@ class GbsCnnClsfier(BaseRunner):
         self.fac1 = args.fac1
         self.num_bs = args.num_bs
         self.is_gbs = args.is_gbs
+        self.num_classes = args.num_classes
         super().__init__(args, loader, model, optim, lr_schdlr)
 
     def _get_weight(self, batch):
@@ -103,7 +104,7 @@ class GbsCnnClsfier(BaseRunner):
             a_test = self.a_test.sample((self.num_bs,))
             loader = self.loader.load('test')
             acc = 0.
-            outputs = np.zeros([self.num_bs, self.n_test, 11])
+            outputs = np.zeros([self.num_bs, self.n_test, self.num_classes + 1])
             beg = 0
             for i, (img, label) in enumerate(loader):
                 index = list(range(beg, beg + img.size(0)))
