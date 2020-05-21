@@ -16,7 +16,15 @@ Before running `main.py`, please make an `ini` script file under the `script` fo
 For detail config, refer to `script/example.ini`.
 
 ## Run
-
+#### CIFAR-10
 ```sh
-➜ python main.py exmaple
+➜ python main.py cutout/cifar10
+```
+#### CIFAR-100
+```sh
+➜ python main.py cutout/cifar100
+```
+#### SVHN
+```sh
+➜ python main.py cutout/svhn
 ```
