@@ -100,6 +100,7 @@ class GbsCnnClsfier(BaseRunner):
 
     def test(self):
         self.G.eval()
+        self.load('best.pth')
         with torch.no_grad():
             a_test = self.a_test.sample((self.num_bs,))
             loader = self.loader.load('test')
