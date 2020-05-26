@@ -120,4 +120,5 @@ class GbsCnnClsfier(BaseRunner):
             label = outputs[0][:, -1]
             acc = pred == label
             self.logger.write(f"[Test] acc : {acc.mean()}")
+            print(f"[Test] acc : {acc.mean()}")
             np.save(f"{self.save_path}/output.npy", outputs)

@@ -1,6 +1,7 @@
 import math
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from collections import OrderedDict
 
@@ -57,7 +58,7 @@ class GbsConvNet(nn.Module):
     def forward(self, x, w, fac1):
         out = self.backbone(x)
         if out.size(-1) != 1:
-            out = out.view(out.size(0), -1)
+            out = F.relu(out, inplace=True).mean([2, 3])
         else:
             out = out.squeeze()
         if self.is_gbs:
