@@ -5,21 +5,27 @@ import torchvision.transforms.functional as F
 import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
 
 
-def get_transform(cutout_size):
+def get_transform(crop_size, padding, cutout_size, is_stl=False):
+    if is_stl:
+        mean = (0.4409, 0.4279, 0.3868)
+        std = (0.2683, 0.2610, 0.2687)
+    else:
+        mean = (0.4914, 0.4822, 0.4465)
+        std = (0.2023, 0.1994, 0.2010)
+
     transform_train = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
+        transforms.RandomCrop(crop_size, padding=padding),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        transforms.Normalize(mean, std),
         CutoutDefault(cutout_size),
     ])
-    return transform_train
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std),
+    ])
 
-
-transform_test = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-])
+    return {'train': transform_train, 'test': transform_test}
 
 
 class CutoutDefault(object):

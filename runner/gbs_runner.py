@@ -76,12 +76,12 @@ class GbsCnnClsfier(BaseRunner):
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
+                self.lr_schdlr.step()
 
                 t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
 
             self.logger.write(f"[Train] epoch:{epoch} loss:{losses/i}")
             self.val(epoch)
-            self.lr_schdlr.step()
 
     def val(self, epoch):
         self.G.eval()
@@ -100,6 +100,7 @@ class GbsCnnClsfier(BaseRunner):
 
     def test(self):
         self.G.eval()
+        self.load('best.pth')
         with torch.no_grad():
             a_test = self.a_test.sample((self.num_bs,))
             loader = self.loader.load('test')
