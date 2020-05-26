@@ -44,13 +44,14 @@ def main():
                                     #   step_size_up=1000)
     # lr_schdlr = lr_scheduler.CosineAnnealingWarmRestarts(optim, args.t_0,
                                                         #  args.t_mul, 0)
+    length = len(data_loader.load('train'))
     if args.scheduler == 'cosine':
-        length = len(data_loader.load('train'))
         lr_schdlr = lr_scheduler.CosineAnnealingLR(optim,
                                                    length * args.num_epoch,
                                                    0.)
     elif args.scheduler == 'step':
-        lr_schdlr = lr_scheduler.MultiStepLR(optim, [60, 120, 160], 0.2)
+        steps = [60 * length, 120 * length, 150 * length, 180 * length]
+        lr_schdlr = lr_scheduler.MultiStepLR(optim, steps, 0.2)
     loss_fn = D
 
     runner = GbsCnnClsfier(args, data_loader, model, optim, lr_schdlr, loss_fn)

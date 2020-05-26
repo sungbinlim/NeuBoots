@@ -29,6 +29,7 @@ class GbsCnnClsfier(BaseRunner):
         self.num_bs = args.num_bs
         self.is_gbs = args.is_gbs
         self.num_classes = args.num_classes
+        self.schdlr_type = args.scheduler
         super().__init__(args, loader, model, optim, lr_schdlr)
 
     def _get_weight(self, batch):
