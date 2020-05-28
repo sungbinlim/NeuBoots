@@ -2,13 +2,14 @@ import torch
 
 from torchvision import models
 
-from .gbsnet import gbs_conv, GbsCls
+from .resnet import ResNet34
 from .densenet import densenet100
+from .gbsnet import gbs_conv, GbsCls
 from .wideresnet import wresnet28_2, wresnet28_10, wresnet16_8
 
 
 MODEL_DICT = {'alexnet': [models.alexnet, 'avgpool', 256 * 6 * 6],
-              'resnet34': [models.resnet34, 'avgpool', 512],
+              'resnet34': [ResNet34, 'layer4', 512],
               'resnet50': [models.resnet50, 'avgpool', 2048],
               'densenet100': [densenet100, 'bn1', 342],
               'squeeze1_0': [models.squeezenet1_0, 'features', 512],
