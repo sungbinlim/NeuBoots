@@ -1,6 +1,11 @@
+import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import entropy
 from scipy.special import softmax
+from torch.distributions.exponential import Exponential
+from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve, average_precision_score
+
 
 
 def multi_calibration_curve(logits, labels, bins=10, is_softmax=False):
@@ -77,3 +82,85 @@ def plot_multiclass_calibration_curve(probs, labels, bins=10,
 
     plt.show()
     return midpnts, accs, cfds, cnt
+
+
+@torch.no_grad()
+def infer(loader, model, num_bs, num_classes, fac, with_acc=False):
+    model.eval()
+    a_test_ = Exponential(torch.ones([1, 400]))
+    a_test = a_test_.sample((num_bs,))
+    acc = 0.
+    outputs = np.zeros([num_bs, len(loader.dataset), num_classes + 1])
+    beg = 0
+    for i, (img, label) in enumerate(loader):
+        index = list(range(beg, beg + img.size(0)))
+        beg = beg + img.size(0)
+        label = label.numpy().reshape(-1, 1)
+        for _ in range(num_bs):
+            w_test = a_test[_].repeat_interleave(img.shape[0], dim=0)
+            output = model(img, w_test, fac).cpu().numpy()
+            outputs[_, index] = np.concatenate([output, label], axis=1)
+
+    if with_acc:
+        pred = outputs.sum(0)[:, :-1].argmax(1)
+        label = outputs[0][:, -1]
+        acc = pred == label
+        print(f"[Test] acc : {acc.mean()}")
+    return outputs
+
+
+def predictive_mean(x):
+    return softmax(x, axis=-1).mean(0)
+
+
+def predictive_entropy(x):
+    return entropy(predictive_mean(x), axis=-1)
+
+
+def expected_entropy(x):
+    return entropy(softmax(x, axis=-1), axis=-1).mean(0)
+
+
+def mutual_information(x):
+    return predictive_entropy(x) - expected_entropy(x)
+
+
+def predictive_std(x):
+    return softmax(x, axis=-1).std(0).sum(1)
+
+
+def histograms(mean_id, mean_od, std_id, std_od, bald_id, bald_od, label):
+    plt.rcParams['font.family'] = ['Times New Roman']
+
+    fig, ax = plt.subplots(1, 3,
+                         gridspec_kw={
+                             'width_ratios': [.3, .3, .3]}, figsize=(20, 4))
+
+    ax[0].hist(mean_id.max(1), bins=200, alpha=0.5, label='In-dist.')
+    ax[0].hist(mean_od.max(1), bins=200, alpha=0.5, label='Out-dis.')
+    ax[0].legend()
+    mean = np.r_[mean_id, mean_od]
+    tpr, fpr, ths = roc_curve(label, mean.max(1))
+    if auc(fpr, tpr) < .5:
+        fpr, tpr = tpr, fpr
+    ax[0].set_ylabel('Count')
+    ax[0].set_title(f'Predictive mean (AUC={auc(fpr, tpr):.4})')
+
+    ax[1].hist(std_id, bins=200, alpha=0.5, label='In-dist.')
+    ax[1].hist(std_od, bins=200, alpha=0.5, label='Out-dis.')
+    ax[1].legend()
+    std = np.r_[std_id, std_od]
+    fpr, tpr, ths = roc_curve(label, std)
+    if auc(fpr, tpr) < .5:
+        fpr, tpr = tpr, fpr
+    ax[1].set_title(f'Predictive std (AUC={auc(fpr, tpr):.4})')
+
+    ax[2].hist(bald_id, bins=200, alpha=0.5, label='In-dist.')
+    ax[2].hist(bald_od, bins=200, alpha=0.5, label='Out-dis.')
+    ax[2].legend()
+    bald = np.r_[bald_id, bald_od]
+    fpr, tpr, ths = roc_curve(label, bald)
+    if auc(fpr, tpr) < .5:
+        fpr, tpr = tpr, fpr
+    ax[2].set_title(f'Mutual Information (AUC={auc(fpr, tpr):.4})')
+    plt.show()
