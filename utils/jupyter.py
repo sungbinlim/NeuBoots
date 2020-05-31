@@ -136,8 +136,10 @@ def histograms(mean_id, mean_od, std_id, std_od, bald_id, bald_od, label):
                          gridspec_kw={
                              'width_ratios': [.3, .3, .3]}, figsize=(20, 4))
 
-    ax[0].hist(mean_id.max(1), bins=200, alpha=0.5, label='In-dist.')
-    ax[0].hist(mean_od.max(1), bins=200, alpha=0.5, label='Out-dis.')
+    beg = min(mean_id.min(), mean_od.min())
+    end = max(mean_id.max(), mean_od.max())
+    ax[0].hist(mean_id.max(1), range=(beg, end), bins=200, alpha=0.5, label='In-dist.')
+    ax[0].hist(mean_od.max(1), range=(beg, end), bins=200, alpha=0.5, label='Out-dis.')
     ax[0].legend()
     mean = np.r_[mean_id, mean_od]
     tpr, fpr, ths = roc_curve(label, mean.max(1))
@@ -146,8 +148,10 @@ def histograms(mean_id, mean_od, std_id, std_od, bald_id, bald_od, label):
     ax[0].set_ylabel('Count')
     ax[0].set_title(f'Predictive mean (AUC={auc(fpr, tpr):.4})')
 
-    ax[1].hist(std_id, bins=200, alpha=0.5, label='In-dist.')
-    ax[1].hist(std_od, bins=200, alpha=0.5, label='Out-dis.')
+    beg = min(std_id.min(), std_od.min())
+    end = max(std_id.max(), std_od.max())
+    ax[1].hist(std_id, range=(beg, end), bins=200, alpha=0.5, label='In-dist.')
+    ax[1].hist(std_od, range=(beg, end), bins=200, alpha=0.5, label='Out-dis.')
     ax[1].legend()
     std = np.r_[std_id, std_od]
     fpr, tpr, ths = roc_curve(label, std)
@@ -155,8 +159,10 @@ def histograms(mean_id, mean_od, std_id, std_od, bald_id, bald_od, label):
         fpr, tpr = tpr, fpr
     ax[1].set_title(f'Predictive std (AUC={auc(fpr, tpr):.4})')
 
-    ax[2].hist(bald_id, bins=200, alpha=0.5, label='In-dist.')
-    ax[2].hist(bald_od, bins=200, alpha=0.5, label='Out-dis.')
+    beg = min(bald_id.min(), bald_od.min())
+    end = max(bald_id.max(), bald_od.max())
+    ax[2].hist(bald_id, range=(beg, end), bins=200, alpha=0.5, label='In-dist.')
+    ax[2].hist(bald_od, range=(beg, end), bins=200, alpha=0.5, label='Out-dis.')
     ax[2].legend()
     bald = np.r_[bald_id, bald_od]
     fpr, tpr, ths = roc_curve(label, bald)
