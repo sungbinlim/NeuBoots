@@ -30,6 +30,7 @@ class GbsCnnClsfier(BaseRunner):
         self.is_gbs = args.is_gbs
         self.num_classes = args.num_classes
         self.schdlr_type = args.scheduler
+        self.model_type = args.model
         super().__init__(args, loader, model, optim, lr_schdlr)
 
     def _get_weight(self, batch):
@@ -71,6 +72,8 @@ class GbsCnnClsfier(BaseRunner):
                     w1 = self._get_weight(batch)[indices]
                 else:
                     w1 = None
+                if self.model_type == 'mlp':
+                    img = img.view(batch, -1)
                 output = self.G(img, self.alpha[indices], self.fac1)
                 loss = self.loss(output, label.cuda(), w1)
                 losses += loss.item()
@@ -91,6 +94,8 @@ class GbsCnnClsfier(BaseRunner):
             acc = []
             for i, (img, label) in enumerate(loader):
                 w_test = torch.ones([img.shape[0], self.n_a]).cuda()
+                if self.model_type == 'mlp':
+                    img = img.view(img.shape[0], -1)
                 output = self.G(img, w_test, self.fac1)
                 pred = output.argmax(1).cpu()
                 _acc = (pred == label).numpy()
@@ -114,6 +119,8 @@ class GbsCnnClsfier(BaseRunner):
                 label = label.numpy().reshape(-1, 1)
                 for _ in range(self.num_bs):
                     w_test = a_test[_].repeat_interleave(img.shape[0], dim=0)
+                    if self.model_type == 'mlp':
+                        img = img.view(img.shape[0], -1)
                     output = self.G(img, w_test, self.fac1).cpu().numpy()
                     outputs[_, index] = np.concatenate([output, label], axis=1)
 
