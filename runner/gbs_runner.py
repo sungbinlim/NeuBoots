@@ -51,9 +51,6 @@ class GbsCnnClsfier(CnnClsfier):
                 break
         return indices
 
-    def _infer_a_batch(self, img, w, fac):
-        return self.G(img, w, fac)
-
     def _calc_loss(self, img, label):
         self.G.train()
         batch = img.size(0)
@@ -66,7 +63,7 @@ class GbsCnnClsfier(CnnClsfier):
         else:
             w1 = None
 
-        output = self._infer_a_batch(img, self.alpha[indices], self.fac1)
+        output = self.G(img, self.alpha[indices], self.fac1)
         loss = self.loss(output, label.cuda(), w1)
         return loss
 

@@ -19,11 +19,8 @@ class CnnClsfier(BaseRunner):
         self.save_kwargs = {}
         super().__init__(args, loader, model)
 
-    def _infer_a_batch(self, img):
-        return self.G(img)
-
     def _calc_loss(self, img, label):
-        output = self._infer_a_batch(img)
+        output = self.G(img)
         loss = self.loss(output, label.cuda())
         return loss
 
@@ -39,7 +36,7 @@ class CnnClsfier(BaseRunner):
     @torch.no_grad()
     def _valid_a_batch(self, img, label):
         self.G.eval()
-        output = self._infer_a_batch(img)
+        output = self.G(img)
         pred = output.argmax(1).cpu()
         return (pred == label).numpy()
 
