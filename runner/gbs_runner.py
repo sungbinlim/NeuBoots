@@ -71,7 +71,7 @@ class GbsCnnClsfier(CnnClsfier):
     def _valid_a_batch(self, img, label):
         self.G.eval()
         w_test = torch.ones([img.size(0), self.n_a]).cuda()
-        output = self._infer_a_batch(img, w_test, self.fac1)
+        output = self.G(img, w_test, self.fac1)
         pred = output.argmax(1).cpu()
         return (pred == label).numpy()
 
