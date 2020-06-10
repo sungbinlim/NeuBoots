@@ -1,6 +1,4 @@
-import torch
 from pathlib import Path
-import shutil
 
 from utils.logger import Logger
 
