@@ -55,7 +55,7 @@ class GbsConvNet(nn.Module):
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
 
-    def forward(self, x, w, fac1):
+    def forward(self, x, w=None, fac1=None):
         out = self.backbone(x)
         if out.size(-1) != 1:
             out = F.relu(out, inplace=True).mean([2, 3])
