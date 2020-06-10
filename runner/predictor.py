@@ -27,7 +27,7 @@ class Predictor(BaseRunner):
 
     def _infer_a_batch_odin(self, img, temp=1000, eps=0.0014, w=None):
         self.G.eval()
-        criteria = torch.nn.CrossEntropyLoss()
+        criterion = torch.nn.CrossEntropyLoss()
         img_ = img.cuda()
         img_.requires_grad = True
         if w is not None:
@@ -36,19 +36,16 @@ class Predictor(BaseRunner):
             output = self.G(img_)
 
         output = output / temp
-        pseudo_label = output.argmax(-1).cuda()
-        loss = criteria(output, pseudo_label)
+        pseudo_label = output.data.argmax(-1).cuda()
+        loss = criterion(output, pseudo_label)
         loss.backward()
 
-        gradient = torch.ge(img_.grad.data, 0)
-        gradient = (gradient.float() - 0.5) * 2
+        gradient = img_.grad.data.ge(0).float()
+        gradient = gradient.sub(.5).mul(2)
 
-        gradient.index_copy_(1, torch.tensor([0]).cuda(),
-                             gradient.index_select(1, torch.tensor([0]).cuda()) / (0.2023))
-        gradient.index_copy_(1, torch.tensor([1]).cuda(),
-                             gradient.index_select(1, torch.tensor([1]).cuda()) / (0.1994))
-        gradient.index_copy_(1, torch.tensor([2]).cuda(),
-                             gradient.index_select(1, torch.tensor([2]).cuda()) / (0.2010))
+        gradient[:, 0].div_(0.2023)
+        gradient[:, 1].div_(0.1994)
+        gradient[:, 2].div_(0.2010)
 
         img_new = torch.add(img_.data, -eps, gradient)
         if w is not None:
@@ -138,15 +135,15 @@ class Predictor(BaseRunner):
     def infer(self, is_gbs, is_odin, with_acc=False, seed=0):
         if is_gbs:
             if is_odin:
-                self.output = self._infer_gbs_odin(with_acc, seed)
+                output = self._infer_gbs_odin(with_acc, seed)
             else:
-                self.output = self._infer_gbs(with_acc, seed)
+                output = self._infer_gbs(with_acc, seed)
         else:
             if is_odin:
-                self.output = self._infer_odin(with_acc)
+                output = self._infer_odin(with_acc)
             else:
-                self.output = self._infer(with_acc)
-        return self.output
+                output = self._infer(with_acc)
+        return output[..., :-1], output[..., -1]
 
     @staticmethod
     def predictive_mean(x, temp):

@@ -13,9 +13,9 @@ class OodDetector(Predictor):
 
     def infer(self, is_gbs, is_odin, with_acc=False, seed=0):
         self.loader = self.loader_in
-        output_id = super().infer(is_gbs, is_odin, with_acc, seed)
+        output_id, _ = super().infer(is_gbs, is_odin, with_acc, seed)
         self.loader = self.loader_out
-        output_od = super().infer(is_gbs, is_odin, with_acc=False, seed=seed)
+        output_od, _ = super().infer(is_gbs, is_odin, with_acc=False, seed=seed)
         self.output_id = output_id
         self.output_od = output_od
         return output_id, output_od
