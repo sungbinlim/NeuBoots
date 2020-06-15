@@ -5,8 +5,8 @@ from torchvision.datasets import MNIST, CIFAR10, CIFAR100, SVHN, STL10
 from math import ceil
 from sklearn.model_selection import StratifiedShuffleSplit
 
-from data.block_sampler import BlockSampler, BlockSubsetSampler
 from utils.preprocessing import get_transform, MnistNorm
+# from data.block_sampler import BlockSampler, BlockSubsetSampler
 
 
 def _get_split_indices(trainset, p, seed):
