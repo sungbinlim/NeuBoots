@@ -346,8 +346,9 @@ def save_fgsm(path, model, img, target, step_size=0.1, fac=1):
     img.requires_grad = True
     model.eval()
     model.zero_grad()
-    output = model(img, w, fac)
+    output = torch.cat([model(img, w, fac) for _ in range(5)], 0).sum(0, keepdim=True)
     pred = output.data.cpu().argmax(1).squeeze()
+    # pred = output.data.cpu().argmax()
     if pred == target:
         loss = loss_fn(output, target.cuda())
         loss.backward()

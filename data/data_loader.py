@@ -6,7 +6,7 @@ from math import ceil
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from utils.preprocessing import get_transform, MnistNorm
-# from data.block_sampler import BlockSampler, BlockSubsetSampler
+from data.block_sampler import BlockSampler, BlockSubsetSampler
 
 
 def _get_split_indices(trainset, p, seed):
