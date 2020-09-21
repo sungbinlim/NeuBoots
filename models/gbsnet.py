@@ -30,9 +30,9 @@ class GbsCls(nn.Module):
             in_feat = hidden_size + n_a
         self.fc_out = nn.Linear(in_feat, num_classes)
 
-    def forward(self, x, w, fac1):
+    def forward(self, x, alpha, fac1):
         out = x
-        out2 = fac1 * torch.exp(-1.0 * w)
+        out2 = fac1 * torch.exp(-1.0 * alpha)
         for i, layer in enumerate(self.fc_layers):
             out = layer(torch.cat([out, out2], dim=1))
         return self.fc_out(torch.cat([out, out2], dim=1))
@@ -93,7 +93,7 @@ def D(Prob, y1, w1=None, reduce='mean'):
     out = ce(Prob, y1)
     if w1 is None:
         return out.mean()
-    out = out[..., None] * w1
+    out = out * w1
     if reduce == 'mean':
         return out.mean()
     else:

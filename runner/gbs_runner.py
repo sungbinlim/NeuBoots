@@ -15,57 +15,39 @@ class GbsCnnClsfier(CnnClsfier):
         self.V = args.v  # V: weight update size for alpha
         self.sub_size = loader.sub_size  # sub_size: size of sub-group (defautl: 1)
         self.n_test = loader.n_test
-        self.n_b = loader.n_b   # n_b: # of sample in a sug-group
-        self.k = int(self.sub_size * self.n_b)  # k: # of sample of each sug-group
+        self.group_indices = loader.groups
         self.a_sample = Exponential(torch.ones([1, self.V]))  # a_sample: alpha generator
         self.a_test = Exponential(torch.ones([1, self.n_a]))
-        self.A = torch.eye(self.sub_size).repeat_interleave(self.n_b, 0).t()  # A: broad-caster
-        self.alpha = torch.ones([self.k, self.n_a])
-        self.k0 = args.k0
+        self.alpha = torch.ones([1, self.n_a])
         self.fac1 = args.fac1
         self.num_bs = args.num_bs
         self.is_gbs = args.is_gbs
         self.num_classes = args.num_classes
         self.schdlr_type = args.scheduler
         self.model_type = args.model
-        self.beg_train = 0
         super().__init__(args, loader, model, optim, lr_schdlr, loss)
         self.save_kwargs['alpha'] = self.alpha
 
-    def _get_weight(self, n0):
-        idx_sampled = sample(range(self.n_a), self.sub_size)
-        k0 = ceil(n0 / self.k * 2 * self.k0)  # k0: weight update size for row
-        ind_a = sample(range(self.k), k0)  # ind_a: row index for weight update
-        for k in range(k0):
-            ind_b = sample(range(self.n_a), self.V)  # ind_b: col index for weight update
-            self.alpha[ind_a[k], ind_b] = self.a_sample.sample()
+    def _update_weight(self):
+        ind_a = sample(range(self.n_a), self.V)
+        self.alpha[:, ind_a] = self.a_sample.sample()
 
-        w = self.alpha[:, idx_sampled] @ self.A
-        return w.t().cuda()
-
-    def _get_indices(self, start, end):
-        indices = []
-        for _, idx in enumerate(cycle(range(self.k))):
-            if start <= _ < end:
-                indices += [idx]
-            if _ >= end:
-                break
-        return indices
-
-    def _calc_loss(self, img, label):
+    def _calc_loss(self, img, label, idx):
+        self._update_weight()
         self.G.train()
         n0 = img.size(0)    # n0: batch_size
-        end = self.beg_train + n0
-        indices = self._get_indices(self.beg_train, end)
-        self.beg_train = end % self.k
+        u_is = []
+        for i in idx:
+            u_i = np.where(self.group_indices == i.item())[0][0]
+            u_is += [u_i]
 
         if self.is_gbs:
-            w = self._get_weight(n0)[indices]
+            w = self.alpha[0, u_is]
         else:
             w = None
 
-        output = self.G(img, self.alpha[indices], self.fac1)
-        loss = self.loss(output, label.cuda(), w)
+        output = self.G(img, self.alpha.repeat_interleave(n0, 0), self.fac1)
+        loss = self.loss(output, label.cuda(), w.cuda())
         return loss
 
     @torch.no_grad()

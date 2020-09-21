@@ -19,14 +19,14 @@ class CnnClsfier(BaseRunner):
         self.save_kwargs = {}
         super().__init__(args, loader, model)
 
-    def _calc_loss(self, img, label):
+    def _calc_loss(self, img, label, idx):
         output = self.G(img)
         loss = self.loss(output, label.cuda())
         return loss
 
-    def _train_a_batch(self, img, label):
+    def _train_a_batch(self, img, label, idx):
         self.G.train()
-        loss = self._calc_loss(img, label)
+        loss = self._calc_loss(img, label, idx)
         self.optim.zero_grad()
         loss.backward()
         self.optim.step()
@@ -48,8 +48,8 @@ class CnnClsfier(BaseRunner):
             t_iter = tqdm(loader, total=self.loader.len,
                           desc=f"[Train {epoch}]")
             losses = 0
-            for i, (img, label) in enumerate(t_iter):
-                loss = self._train_a_batch(img, label)
+            for i, (img, label, idx) in enumerate(t_iter):
+                loss = self._train_a_batch(img, label, idx)
                 losses += loss
                 t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
 
@@ -59,7 +59,7 @@ class CnnClsfier(BaseRunner):
     def val(self, epoch):
         loader = self.loader.load('val')
         acc = []
-        for i, (img, label) in enumerate(loader):
+        for i, (img, label, idx) in enumerate(loader):
             _acc = self._valid_a_batch(img, label)
             acc += [_acc]
         acc = np.concatenate(acc).mean()
