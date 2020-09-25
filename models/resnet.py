@@ -207,8 +207,8 @@ class ResNet(nn.Module):
         y = self.linear(out)
         return y, penultimate
     
-def ResNet18(num_c):
-    return ResNet(PreActBlock, [2,2,2,2], num_classes=num_c)
+def ResNet18(_, **kwags):
+    return ResNet(BasicBlock, [2,2,2,2])
 
 def ResNet34(_, **kwags):
     return ResNet(BasicBlock, [3,4,6,3])

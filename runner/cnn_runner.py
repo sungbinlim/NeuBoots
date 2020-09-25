@@ -110,7 +110,7 @@ class CnnClsfier(BaseRunner):
                 elif key == 'lr_schdlr':
                     self.lr_schdlr.load_state_dict(value)
                 elif key == 'epoch':
-                    self.epoch = value
+                    self.epoch = value + 1
                 elif key == 'score':
                     self.best_metric = value
                 else:

@@ -29,11 +29,12 @@ class GbsCnnClsfier(CnnClsfier):
         self.save_kwargs['alpha'] = self.alpha
 
     def _update_weight(self):
-        ind_a = sample(range(self.n_a), self.V)
-        self.alpha[:, ind_a] = self.a_sample.sample()
+        # ind_a = sample(range(self.n_a), self.V)
+        # self.alpha[:, ind_a] = self.a_sample.sample()
+        self.alpha = Exponential(torch.ones([1, self.n_a])).sample()
 
     def _calc_loss(self, img, label, idx):
-        self._update_weight()
+        # self._update_weight()
         self.G.train()
         n0 = img.size(0)    # n0: batch_size
         u_is = []
@@ -42,18 +43,19 @@ class GbsCnnClsfier(CnnClsfier):
             u_is += [u_i]
 
         if self.is_gbs:
-            w = self.alpha[0, u_is]
+            w = self.alpha[0, u_is].cuda()
         else:
             w = None
 
         output = self.G(img, self.alpha.repeat_interleave(n0, 0), self.fac1)
-        loss = self.loss(output, label.cuda(), w.cuda())
+        loss = self.loss(output, label.cuda(), w)
         return loss
 
     @torch.no_grad()
     def _valid_a_batch(self, img, label):
+        self._update_weight()
         self.G.eval()
-        w_test = torch.ones([img.size(0), self.n_a]).cuda()
+        w_test = torch.zeros([img.size(0), self.n_a]).cuda()
         output = self.G(img, w_test, self.fac1)
         pred = output.argmax(1).cpu()
         return (pred == label).numpy()
@@ -61,7 +63,7 @@ class GbsCnnClsfier(CnnClsfier):
     @torch.no_grad()
     def test(self):
         self.G.eval()
-        self.load('best.pth')
+        self.load('model.pth')
         a_test = self.a_test.sample((self.num_bs,))
         loader = self.loader.load('test')
         acc = 0.
@@ -83,3 +85,4 @@ class GbsCnnClsfier(CnnClsfier):
         acc = pred == label
         self.logger.write(f"[Test] acc : {acc.mean()}")
         print(f"[Test] acc : {acc.mean()}")
+        np.save(f'{self.save_path}/output.npy', outputs)

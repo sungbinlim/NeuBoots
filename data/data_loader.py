@@ -56,7 +56,7 @@ class GbsDataLoader(object):
         self.n_val = len(self.split_indices[1])
         self.groups = _get_kfolded_indices(self.split_indices[0],
                                            self.dataset['train'],
-                                           400, seed)
+                                           n_a, seed)
         self.n_test = len(self.dataset['test'])
         self.n_b = self.n_train // n_a
         self.batch_size = batch_size
