@@ -206,7 +206,7 @@ class ResNet_Cifar(nn.Module):
 
 class PreAct_ResNet_Cifar(nn.Module):
 
-    def __init__(self, block, layers, num_classes=100):
+    def __init__(self, block, layers, num_classes=100, drop_rate=0.2):
         super(PreAct_ResNet_Cifar, self).__init__()
         self.inplanes = 16
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
@@ -217,6 +217,7 @@ class PreAct_ResNet_Cifar(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.avgpool = nn.AvgPool2d(8, stride=1)
         self.fc = nn.Linear(64*block.expansion, num_classes)
+        self.dropout = nn.Dropout(p=drop_rate)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -242,14 +243,19 @@ class PreAct_ResNet_Cifar(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
+        x = self.dropout(x)
 
         x = self.layer1(x)
+        x = self.dropout(x)
         x = self.layer2(x)
+        x = self.dropout(x)
         x = self.layer3(x)
+        x = self.dropout(x)
 
         x = self.bn(x)
         x = self.relu(x)
         x = self.avgpool(x)
+        x = self.dropout(x)
         last_feature = x.view(x.size(0), -1)
         x = self.fc(last_feature)
 
@@ -261,5 +267,5 @@ def resnet20(**kwargs):
     return model
 
 def resnet110(_, **kwargs):
-    model = PreAct_ResNet_Cifar(PreActBasicBlock, [18, 18, 18], **kwargs)
+    model = PreAct_ResNet_Cifar(PreActBasicBlock, [18, 18, 18], drop_rate=_, **kwargs)
     return model

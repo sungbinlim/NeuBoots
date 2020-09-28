@@ -10,11 +10,13 @@ class LinearActBn(nn.Module):
     def __init__(self, in_feat, out_feat):
         super().__init__()
         self.fc = nn.Sequential(OrderedDict([
-            ('linear', nn.Linear(in_feat, out_feat//4)),
-            ('act', nn.LeakyReLU(inplace=False)),
-            ('norm', nn.BatchNorm1d(out_feat//4)),
-            ('linear2', nn.Linear(out_feat//4, out_feat)),
+            ('linear', nn.Linear(in_feat, out_feat)),
             ('sigmoid', nn.Sigmoid())
+            # ('linear', nn.Linear(in_feat, out_feat//4)),
+            # ('act', nn.LeakyReLU(inplace=False)),
+            # ('norm', nn.BatchNorm1d(out_feat//4)),
+            # ('linear2', nn.Linear(out_feat//4, out_feat)),
+            # ('sigmoid', nn.Sigmoid())
             # ('sigmoid', nn.Sigmoid())
         ]))
 
@@ -27,11 +29,15 @@ class GbsCls(nn.Module):
         super().__init__()
         self.in_feat = in_feat
         self.fc_out = nn.Linear(in_feat, num_classes)
+        # self.linear = LinearActBn(n_a, in_feat)
 
-    def forward(self, x, alpha, fac1):
+    def forward(self, x, alpha, drop_rate):
         out = x
-        out2 = torch.exp(-F.interpolate(alpha[:, None], self.in_feat))[:, 0]
-        out2 = out2 * fac1 + (1 - fac1)
+        # out2 = torch.exp(-F.interpolate(alpha[:, None], self.in_feat))[:, 0]
+
+        # print(out2, out2.min(), out2.max())
+        # out2 = self.linear(alpha)
+        # out2 = out2 * fac1 + (1 - fac1)
         return self.fc_out(out * out2)
 
 
