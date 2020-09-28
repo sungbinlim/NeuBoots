@@ -26,13 +26,14 @@ class GbsCls(nn.Module):
     def __init__(self, in_feat, hidden_size, num_layer, n_a, num_classes):
         super().__init__()
         self.in_feat = in_feat
-        self.fc_out = nn.Linear(in_feat, num_classes)
+        self.fc_out = nn.Linear(in_feat + n_a, num_classes)
 
     def forward(self, x, alpha, fac1):
-        out = x
-        out2 = torch.exp(-F.interpolate(alpha[:, None], self.in_feat))[:, 0]
-        out2 = out2 * fac1 + (1 - fac1)
-        return self.fc_out(out * out2)
+        out1 = x
+        # out2 = torch.exp(-F.interpolate(alpha[:, None], self.in_feat))[:, 0]
+        out2 = torch.exp(-alpha) * fac1
+        out = torch.cat([out1, out2], dim=1)
+        return self.fc_out(out)
 
 
 class GbsConvNet(nn.Module):
