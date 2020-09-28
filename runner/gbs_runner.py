@@ -5,8 +5,10 @@ import numpy as np
 from random import sample
 from math import ceil
 from itertools import cycle
+from scipy.special import softmax
 
 from runner.cnn_runner import CnnClsfier
+from utils.jupyter import *
 
 
 class GbsCnnClsfier(CnnClsfier):
@@ -83,6 +85,8 @@ class GbsCnnClsfier(CnnClsfier):
         pred = outputs.sum(0)[:, :-1].argmax(1)
         label = outputs[0][:, -1]
         acc = pred == label
-        self.logger.write(f"[Test] acc : {acc.mean()}")
+        ece = calc_ece(softmax(outputs[:, :, :-1], -1).mean(0), label)
+        nll, brier = calc_nll_brier(softmax(outputs[:, :, :-1], -1).mean(0), outputs[:, :, :-1].mean(0), label, torch.nn.functional.one_hot(torch.from_numpy(label.astype(int)), self.num_classes).numpy())
         print(f"[Test] acc : {acc.mean()}")
+        self.logger.write(f"[Test] acc : {acc.mean()}, ece : {ece}, nll : {nll}, brier : {brier}")
         np.save(f'{self.save_path}/output.npy', outputs)

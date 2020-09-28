@@ -367,3 +367,58 @@ def save_fgsm(path, model, img, target, step_size=0.1, fac=1):
         save_path = Path(path)
         save_path.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(save_path), new_img)
+
+
+# ECE
+def calc_ece(softmax, label, bins=15):
+    bin_boundaries = torch.linspace(0, 1, bins + 1)
+    bin_lowers = bin_boundaries[:-1]
+    bin_uppers = bin_boundaries[1:]
+
+    softmax = torch.tensor(softmax)
+    labels = torch.tensor(label)
+
+    softmax_max, predictions = torch.max(softmax, 1)
+    correctness = predictions.eq(labels)
+
+    ece = torch.zeros(1)
+
+    for bin_lower, bin_upper in zip(bin_lowers, bin_uppers):
+        in_bin = softmax_max.gt(bin_lower.item()) * softmax_max.le(bin_upper.item())
+        prop_in_bin = in_bin.float().mean()
+
+        if prop_in_bin.item() > 0.0:
+            accuracy_in_bin = correctness[in_bin].float().mean()
+            avg_confidence_in_bin = softmax_max[in_bin].mean()
+
+            ece += torch.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
+
+    print("ECE {0:.2f} ".format(ece.item()*100))
+
+    return ece.item()
+
+
+# NLL & Brier Score
+def calc_nll_brier(softmax, logit, label, label_onehot):
+    brier_score = np.mean(np.sum((softmax - label_onehot) ** 2, axis=1))
+
+    logit = torch.tensor(logit, dtype=torch.float)
+    label = torch.tensor(label, dtype=torch.int)
+    logsoftmax = torch.nn.LogSoftmax(dim=1)
+
+    log_softmax = logsoftmax(logit)
+    nll = calc_nll(log_softmax, label)
+
+    print("NLL {0:.2f} ".format(nll.item()*10))
+    print('Brier {0:.2f}'.format(brier_score*100))
+
+    return nll.item(), brier_score
+
+
+# Calc NLL
+def calc_nll(log_softmax, label):
+    out = torch.zeros_like(label, dtype=torch.float)
+    for i in range(len(label)):
+        out[i] = log_softmax[i][label[i]]
+
+    return -out.sum()/len(out)
