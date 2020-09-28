@@ -2,6 +2,7 @@ import math
 import torch
 from torch import nn
 import torch.nn.functional as F
+import random
 
 from collections import OrderedDict
 
@@ -29,16 +30,19 @@ class GbsCls(nn.Module):
         super().__init__()
         self.in_feat = in_feat
         self.fc_out = nn.Linear(in_feat, num_classes)
+        self.n_a = n_a
         # self.linear = LinearActBn(n_a, in_feat)
 
     def forward(self, x, alpha, drop_rate):
-        out = x
-        # out2 = torch.exp(-F.interpolate(alpha[:, None], self.in_feat))[:, 0]
-
-        # print(out2, out2.min(), out2.max())
-        # out2 = self.linear(alpha)
-        # out2 = out2 * fac1 + (1 - fac1)
-        return self.fc_out(out * out2)
+        logit = x
+        weight = torch.ones_like(logit).cuda()
+        n_drop = int(self.in_feat * drop_rate)
+        indice_from = random.sample(range(self.n_a), n_drop)
+        indice_to = random.sample(range(self.in_feat), n_drop)
+        rho = torch.randint(2, [1, n_drop]).cuda() * 2 - 1
+        weight[:, indice_to] = torch.exp(-alpha[:, indice_from]) * rho
+        # print(weight[0], weight.shape, weight.min(), weight.max())
+        return self.fc_out(logit * weight)
 
 
 class GbsConvNet(nn.Module):
