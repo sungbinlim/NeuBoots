@@ -23,18 +23,18 @@ class LinearActBn(nn.Module):
 
 
 class GbsCls(nn.Module):
-    def __init__(self, in_feat, hidden_size, num_layer, n_a, num_classes):
+    def __init__(self, in_feat, n_a, num_classes):
         super().__init__()
         self.in_feat = in_feat
         self.fc_out = nn.Linear(in_feat, num_classes)
         self.n_a = n_a
 
-    def forward(self, x, alpha, fac1):
+    def forward(self, x, alpha):
         out1 = x
         if self.in_feat != self.n_a:
-            out2 = torch.exp(-F.interpolate(alpha[:, None], self.in_feat))[:, 0] * fac1
+            out2 = torch.exp(-F.interpolate(alpha[:, None], self.in_feat))[:, 0]
         else:
-            out2 = torch.exp(-alpha) * fac1
+            out2 = torch.exp(-alpha)
         return self.fc_out(out1 * out2)
 
 
