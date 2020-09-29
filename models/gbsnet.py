@@ -55,14 +55,14 @@ class GbsConvNet(nn.Module):
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
 
-    def forward(self, x, w=None, fac1=None):
+    def forward(self, x, w=None):
         out = self.backbone(x)
         if out.size(-1) != 1:
             out = F.relu(out, inplace=True).mean([2, 3])
         else:
             out = out.squeeze()
         if self.is_gbs:
-            return self.classifer(out, w, fac1)
+            return self.classifer(out, w)
         else:
             return self.classifer(out)
 
