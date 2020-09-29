@@ -13,12 +13,13 @@ from utils.jupyter import *
 
 class GbsCnnClsfier(CnnClsfier):
     def __init__(self, args, loader, model, optim, lr_schdlr, loss):
-        self.n_a = loader.n_a  # n_a: # of sub-group
-        self.V = args.v  # V: weight update size for alpha
-        self.sub_size = loader.sub_size  # sub_size: size of sub-group (defautl: 1)
+        self.n_a = args.n_a  # n_a: # of sub-group
+        self.epoch_th = args.epoch_th
+        # self.V = args.v  # V: weight update size for alpha
+        # self.sub_size = loader.sub_size  # sub_size: size of sub-group (defautl: 1)
         self.n_test = loader.n_test
         self.group_indices = loader.groups
-        self.a_sample = Exponential(torch.ones([1, self.V]))  # a_sample: alpha generator
+        # self.a_sample = Exponential(torch.ones([1, self.V]))  # a_sample: alpha generator
         self.a_test = Exponential(torch.ones([1, self.n_a]))
         self.alpha = torch.ones([1, self.n_a])
         self.fac1 = args.fac1
@@ -33,7 +34,8 @@ class GbsCnnClsfier(CnnClsfier):
     def _update_weight(self):
         # ind_a = sample(range(self.n_a), self.V)
         # self.alpha[:, ind_a] = self.a_sample.sample()
-        self.alpha = Exponential(torch.ones([1, self.n_a])).sample()
+        if self.epoch > self.epoch_th:
+            self.alpha = Exponential(torch.ones([1, self.n_a])).sample()
 
     def _calc_loss(self, img, label, idx):
         # self._update_weight()
