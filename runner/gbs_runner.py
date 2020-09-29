@@ -11,6 +11,12 @@ from runner.cnn_runner import CnnClsfier
 from utils.jupyter import *
 
 
+def apply_dropout(m):
+    if type(m) == torch.nn.Dropout:
+        m.train()
+        m.p = 0.2
+
+
 class GbsCnnClsfier(CnnClsfier):
     def __init__(self, args, loader, model, optim, lr_schdlr, loss):
         self.n_a = args.n_a  # n_a: # of sub-group
@@ -62,6 +68,7 @@ class GbsCnnClsfier(CnnClsfier):
     @torch.no_grad()
     def test(self):
         self.G.eval()
+        self.G.apply(apply_dropout)
         self.load('model.pth')
         a_test = self.a_test.sample((self.num_bs,))
         loader = self.loader.load('test')
