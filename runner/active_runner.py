@@ -56,14 +56,20 @@ class ActiveRunner(object):
         indice_coreset = np.array(self.indice[:self.num_query])
         self._init_for_training()
         self._train_a_query(indice_coreset)
-        test_res, acc, _ = infer(self.test_loader, self.model,
-                                 100, 10, True, True)
+        test_res, acc = infer(self.test_loader, self.model,
+                              100, 10, True, False)
         self._save(acc, 'coreset')
         self.trained_indice = indice_coreset.tolist()
 
-    def train_next_query(self):
+    def train_next_query(self, save_name):
         next_indice = self._sample_next_query_using_uncertainty()
-        print(next_indice)
+        indices = np.concatenate([self.trained_indice, next_indice])
+        self._init_for_training()
+        self._train_a_query(indices)
+        test_res, acc = infer(self.test_loader, self.model,
+                              100, 10, True, False)
+        self._save(acc, save_name)
+        self.trained_indice = indices.tolist()
 
     def _sample_next_query_using_uncertainty(self):
         target_indice = list(set(self.indice) - set(self.trained_indice))
@@ -75,7 +81,7 @@ class ActiveRunner(object):
         pairs = sorted(
             [[uncertainties[i], indices[i]] for i in range(len(target_indice))],
             key=lambda x: x[0])
-        return pairs[:self.num_query, 1]
+        return np.array(pairs)[:self.num_query, 1]
 
     def _train_a_query(self, indice):
         indexer = np.stack(
