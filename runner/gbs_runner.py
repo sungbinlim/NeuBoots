@@ -15,6 +15,7 @@ def apply_dropout(m):
     if type(m) == torch.nn.Dropout:
         m.train()
         m.p = 0.2
+        print(m)
 
 
 class GbsCnnClsfier(CnnClsfier):
@@ -68,6 +69,7 @@ class GbsCnnClsfier(CnnClsfier):
     @torch.no_grad()
     def test(self):
         self.G.eval()
+        # print(self.G)
         self.G.apply(apply_dropout)
         self.load('model.pth')
         a_test = self.a_test.sample((self.num_bs,))

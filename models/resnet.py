@@ -37,12 +37,14 @@ class BasicBlock(nn.Module):
                 nn.BatchNorm2d(self.expansion*planes)
             )
 
+        self.drop = nn.Dropout(p=0.2)
+
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
         out = F.relu(out)
-        return out
+        return self.drop(out)
 
 
 class PreActBlock(nn.Module):
@@ -61,13 +63,15 @@ class PreActBlock(nn.Module):
                 nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False)
             )
 
+        self.drop = nn.Dropout(p=0.2)
+
     def forward(self, x):
         out = F.relu(self.bn1(x))
         shortcut = self.shortcut(out) if hasattr(self, 'shortcut') else x
         out = self.conv1(out)
         out = self.conv2(F.relu(self.bn2(out)))
         out += shortcut
-        return out
+        return self.drop(out)
 
 
 class Bottleneck(nn.Module):
@@ -89,13 +93,15 @@ class Bottleneck(nn.Module):
                 nn.BatchNorm2d(self.expansion*planes)
             )
 
+        self.drop = nn.Dropout(p=0.2)
+
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
         out = F.relu(self.bn2(self.conv2(out)))
         out = self.bn3(self.conv3(out))
         out += self.shortcut(x)
         out = F.relu(out)
-        return out
+        return self.drop(out)
 
 
 class PreActBottleneck(nn.Module):
@@ -116,6 +122,8 @@ class PreActBottleneck(nn.Module):
                 nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False)
             )
 
+        self.drop = nn.Dropout(p=0.2)
+
     def forward(self, x):
         out = F.relu(self.bn1(x))
         shortcut = self.shortcut(out) if hasattr(self, 'shortcut') else x
@@ -123,11 +131,11 @@ class PreActBottleneck(nn.Module):
         out = self.conv2(F.relu(self.bn2(out)))
         out = self.conv3(F.relu(self.bn3(out)))
         out += shortcut
-        return out
+        return self.drop(out)
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10, drop_rate=0.2):
+    def __init__(self, block, num_blocks, num_classes=10, drop_rate=0.0):
         super(ResNet, self).__init__()
         self.in_planes = 64
 
@@ -138,7 +146,7 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
         self.linear = nn.Linear(512*block.expansion, num_classes)
-        self.drop = nn.Dropout(p=drop_rate)
+        # self.drop = nn.Dropout(p=drop_rate)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
