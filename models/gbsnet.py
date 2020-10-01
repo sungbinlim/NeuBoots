@@ -23,19 +23,27 @@ class LinearActBn(nn.Module):
 
 
 class GbsCls(nn.Module):
-    def __init__(self, in_feat, n_a, num_classes):
+    def __init__(self, in_feat, n_a, num_classes, feature_adaptive=True):
         super().__init__()
         self.in_feat = in_feat
-        self.fc_out = nn.Linear(in_feat, num_classes)
+        if feature_adaptive:
+            self.fc_out = nn.Linear(in_feat, num_classes)
+        else:
+            self.fc_out = nn.Linear(in_feat * 2, num_classes)
         self.n_a = n_a
+        self.feature_adaptive = feature_adaptive
 
     def forward(self, x, alpha):
         out1 = x
         if self.in_feat != self.n_a:
-            out2 = torch.exp(-F.interpolate(alpha[:, None], self.in_feat))[:, 0]
+            out2 = torch.exp(-F.interpolate(alpha[:, None],
+                             self.in_feat))[:, 0]
         else:
             out2 = torch.exp(-alpha)
-        return self.fc_out(out1 * out2)
+        if self.feature_adaptive:
+            return self.fc_out(out1 * out2)
+        else:
+            return self.fc_out(torch.cat([out1, out2], dim=1))
 
 
 class GbsConvNet(nn.Module):

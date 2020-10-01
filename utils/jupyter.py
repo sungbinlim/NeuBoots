@@ -10,6 +10,11 @@ from torch.distributions.exponential import Exponential
 from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve, average_precision_score
 
 
+def apply_dropout(m):
+    if type(m) == torch.nn.Dropout:
+        m.train()
+        m.p = 0.2
+
 
 def multi_calibration_curve(logits, labels, bins=10, is_softmax=False):
     bin_boundaries = np.linspace(0., 1., bins+1, dtype=float)
@@ -61,7 +66,7 @@ def plot_multiclass_calibration_curve(probs, labels, bins=10,
     ax[0].plot(np.linspace(0, 1.0, 20), np.linspace(0, 1.0, 20), '--', lw=2,
                alpha=.7, color='gray', label='Perfectly calibrated', zorder=1)
 
-    ax[0].set_title(f'{title} (ECE = {ece[0] * 100:.2f}%)\n', fontsize=fsize)
+    # ax[0].set_title(f'{title} (ECE = {ece[0] * 100:.2f}%)\n', fontsize=fsize)
     ax[0].set_xlim(0.0, 1.0)
     ax[0].set_ylim(0.0, 1.0)
     ax[0].set_ylabel('Accuracy\n', fontsize=fsize)
@@ -88,7 +93,7 @@ def plot_multiclass_calibration_curve(probs, labels, bins=10,
 
 
 @torch.no_grad()
-def infer(loader, model, num_bs, num_classes, with_acc=False, with_indice=False, seed=0):
+def infer(loader, model, num_bs, num_classes, with_acc=False, with_indice=False, is_mcd=False, seed=0):
     torch.manual_seed(seed)
     model.eval()
     a_test_ = Exponential(torch.ones([1, 400]))
@@ -106,6 +111,8 @@ def infer(loader, model, num_bs, num_classes, with_acc=False, with_indice=False,
         indice += [_]
         for _ in range(num_bs):
             w_test = a_test[_].repeat_interleave(img.shape[0], dim=0)
+            if is_mcd:
+                model.apply(apply_dropout)
             output = model(img, w_test.cuda()).cpu().numpy()
             outputs[_, index] = np.concatenate([output, label], axis=1)
     ret += [outputs]

@@ -27,13 +27,15 @@ MODEL_DICT = {'mlp': [None, 'none', 28 * 28 * 3],
               'wresnet28_10': [wresnet28_10, 'avgpool', 640]}
 
 
-def _get_model(model_name, n_a, num_classes, is_gbs=True, dropout_rate=0.):
+def _get_model(model_name, n_a, num_classes, is_gbs=True,
+               dropout_rate=0., is_feature_adaptive=True):
     backbone, return_layer, in_feat = MODEL_DICT[model_name]
     if is_gbs:
-        classifier = GbsCls(in_feat, n_a, num_classes)
+        classifier = GbsCls(in_feat, n_a, num_classes, is_feature_adaptive)
     else:
         classifier = torch.nn.Linear(in_feat, num_classes)
     if backbone:
-        return gbs_conv(backbone, return_layer, classifier, is_gbs, dropout_rate)
+        return gbs_conv(backbone, return_layer,
+                        classifier, is_gbs, dropout_rate)
     else:
         return classifier
