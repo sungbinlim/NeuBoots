@@ -1,6 +1,6 @@
-# GBS
+# NeuBoots
 
-This repository contains an implementation of the Generative Bootstrap Sampler (GBS) model.
+This repository contains an official implementation of the Neural Bootstrapper.
 
 ## Prerequsites
 
