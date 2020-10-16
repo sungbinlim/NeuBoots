@@ -12,7 +12,7 @@ from torch.distributions.exponential import Exponential
 from torch.utils.data.sampler import SubsetRandomSampler
 
 from utils.jupyter import *
-from models.gbsnet import D
+from models.nbsnet import D
 from models import _get_model
 from data.data_loader import Dataset
 from utils.preprocessing import get_transform

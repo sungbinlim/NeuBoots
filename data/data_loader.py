@@ -7,7 +7,6 @@ from math import ceil
 from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
 
 from utils.preprocessing import get_transform, MnistNorm
-from data.block_sampler import BlockSampler, BlockSubsetSampler
 
 
 def _get_split_indices(trainset, p, seed):
@@ -22,11 +21,13 @@ def _get_kfolded_indices(valid_indices, trainset, num_k, seed):
     valid_targets = [train_targets[i] for i in valid_indices]
     splitter = StratifiedKFold(num_k, True, seed)
     mask_iter = splitter._iter_test_masks(valid_indices, valid_targets)
-    kfolded_indices = [np.array(valid_indices[np.nonzero(m)]) for m in mask_iter]
+    kfolded_indices = [np.array(valid_indices[np.nonzero(m)])
+                       for m in mask_iter]
     base_len = len(kfolded_indices[0])
     for i, k in enumerate(kfolded_indices):
         if len(k) < base_len:
-            kfolded_indices[i] = np.pad(k, (0, base_len - len(k)), mode='edge')[None, ...]
+            kfolded_indices[i] = np.pad(k, (0, base_len - len(k)),
+                                        mode='edge')[None, ...]
         else:
             kfolded_indices[i] = k[None, ...]
     return np.concatenate(kfolded_indices, 0)
@@ -44,7 +45,7 @@ class Dataset(VisionDataset):
         return len(self.dataset)
 
 
-class GbsDataLoader(object):
+class NbsDataLoader(object):
     def __init__(self, dataset, batch_size, n_a, sub_size, cpus, seed=0):
         self.dataset = self._get_dataset(dataset)
         self.split_indices = _get_split_indices(self.dataset['train'],
@@ -66,10 +67,10 @@ class GbsDataLoader(object):
         _f = {'train': lambda: self._train(),
               'val': lambda: self._val(),
               'test': lambda: self._test()}
-        try:  # lambda for lazy evaluation
+        try:
             loader = _f[phase]()
             return loader
-        except:
+        except KeyError:
             raise ValueError('Dataset should be one of [train, val, test]')
 
     def _train(self):
@@ -102,7 +103,7 @@ class GbsDataLoader(object):
         try:
             _dataset = _d[dataset]()
             return _dataset
-        except:
+        except KeyError:
             raise ValueError(
                 "Dataset should be one of [mnist, cifar10"
                 ", cifar100, svhn, svhn_extra, stl]")

@@ -7,11 +7,11 @@ from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 from torch.optim import lr_scheduler, Adam, RMSprop, SGD
 
-from models.gbsnet import D
+from models.nbsnet import D
 from models import _get_model
 from utils.arg_parser import parse_args
-from data.data_loader import GbsDataLoader
-from runner.gbs_runner import GbsCnnClsfier
+from data.data_loader import NbsDataLoader
+from runner.nbs_runner import NbsCnnClsfier
 
 torch.backends.cudnn.benchmark = True
 
@@ -35,7 +35,7 @@ def main():
         torch.cuda.set_device(cmd_args.local_rank)
         dist.init_process_group(backend='nccl', init_method='env://')
 
-    data_loader = GbsDataLoader(args.dataset, args.batch_size,
+    data_loader = NbsDataLoader(args.dataset, args.batch_size,
                                 args.n_a, args.sub_size, args.cpus)
     p = data_loader.p
     model, optim = get_model_optim(args, p)
@@ -49,7 +49,7 @@ def main():
         lr_schdlr = lr_scheduler.MultiStepLR(optim, steps, 0.2)
     loss_fn = D
 
-    runner = GbsCnnClsfier(args, data_loader, model, optim, lr_schdlr, loss_fn)
+    runner = NbsCnnClsfier(args, data_loader, model, optim, lr_schdlr, loss_fn)
     if args.phase == 'train':
         runner.train()
         runner.test()
@@ -59,7 +59,7 @@ def main():
 
 def get_model_optim(args, p):
     model = _get_model(args.model, args.n_a, args.num_classes,
-                       args.is_gbs, args.dropout_rate).cuda()
+                       args.is_nbs, args.dropout_rate).cuda()
     if args.optim == 'adam':
         Optim = Adam
     elif args.optim == 'rmsp':

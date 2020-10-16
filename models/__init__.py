@@ -7,7 +7,7 @@ from .vgg_ca import vgg16
 from .resnet_ca import resnet110
 from .densenet import densenet100
 from .densenet_ca import dense_bc
-from .gbsnet import gbs_conv, GbsCls
+from .nbsnet import nbs_conv, NbsCls
 from .wideresnet import wresnet28_2, wresnet28_10, wresnet16_8
 
 
@@ -27,15 +27,15 @@ MODEL_DICT = {'mlp': [None, 'none', 28 * 28 * 3],
               'wresnet28_10': [wresnet28_10, 'avgpool', 640]}
 
 
-def _get_model(model_name, n_a, num_classes, is_gbs=True,
+def _get_model(model_name, n_a, num_classes, is_nbs=True,
                dropout_rate=0., is_feature_adaptive=True):
     backbone, return_layer, in_feat = MODEL_DICT[model_name]
-    if is_gbs:
-        classifier = GbsCls(in_feat, n_a, num_classes, is_feature_adaptive)
+    if is_nbs:
+        classifier = NbsCls(in_feat, n_a, num_classes, is_feature_adaptive)
     else:
         classifier = torch.nn.Linear(in_feat, num_classes)
     if backbone:
-        return gbs_conv(backbone, return_layer,
-                        classifier, is_gbs, dropout_rate)
+        return nbs_conv(backbone, return_layer,
+                        classifier, is_nbs, dropout_rate)
     else:
         return classifier
