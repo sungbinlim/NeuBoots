@@ -6,44 +6,48 @@ import torch.nn.functional as F
 from collections import OrderedDict
 
 
-class LinearActBn(nn.Module):
-    def __init__(self, in_feat, out_feat):
+class NbsCls(nn.Module):
+    def __init__(self, in_feat, n_a, num_classes, feature_adaptive=True):
         super().__init__()
-        self.fc = nn.Sequential(OrderedDict([
-            ('linear', nn.Linear(in_feat, out_feat)),
-            ('act', nn.LeakyReLU(inplace=False)),
-            ('norm', nn.BatchNorm1d(out_feat))
-        ]))
+        self.in_feat = in_feat
+        if feature_adaptive:
+            self.fc_out = nn.Linear(in_feat, num_classes)
+        else:
+            self.fc_out = nn.Linear(in_feat * 2, num_classes)
+        self.n_a = n_a
+        self.feature_adaptive = feature_adaptive
+        self.num_classes = num_classes
 
-    def forward(self, x):
-        return self.fc(x)
+    def forward(self, x, alpha):
+        out1 = x
+        if isinstance(alpha, int):
+            res_ = torch.zeros([alpha, out1.size(0), self.num_classes]).cuda()
+            for i in range(alpha):
+                w = torch.rand_like(out1).cuda()
+                if self.feature_adaptive:
+                    res = self.fc_out(out1 * w)
+                else:
+                    res = self.fc_out(torch.cat([out1, w], dim=1))
+                res_[i] += res
+            return res_
+        else:
+            if self.in_feat != self.n_a:
+                out2 = torch.exp(-F.interpolate(alpha[:, None],
+                                 self.in_feat))[:, 0]
+            else:
+                out2 = torch.exp(-alpha)
+            if self.feature_adaptive:
+                return self.fc_out(out1 * out2)
+            else:
+                return self.fc_out(torch.cat([out1, out2], dim=1))
 
 
-class GbsCls(nn.Module):
-    def __init__(self, in_feat, hidden_size, num_layer, n_a, num_classes):
-        super().__init__()
-        self.fc_layers = nn.ModuleList()
-        in_feat += n_a
-        for i in range(num_layer):
-            fc = LinearActBn(in_feat, hidden_size)
-            self.fc_layers.append(fc)
-            in_feat = hidden_size + n_a
-        self.fc_out = nn.Linear(in_feat, num_classes)
-
-    def forward(self, x, w, fac1):
-        out = x
-        out2 = fac1 * torch.exp(-1.0 * w)
-        for i, layer in enumerate(self.fc_layers):
-            out = layer(torch.cat([out, out2], dim=1))
-        return self.fc_out(torch.cat([out, out2], dim=1))
-
-
-class GbsConvNet(nn.Module):
-    def __init__(self, backbone, classifier, is_gbs):
+class NbsConvNet(nn.Module):
+    def __init__(self, backbone, classifier, is_nbs):
         super().__init__()
         self.backbone = backbone
         self.classifer = classifier
-        self.is_gbs = is_gbs
+        self.is_nbs = is_nbs
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -55,14 +59,14 @@ class GbsConvNet(nn.Module):
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
 
-    def forward(self, x, w=None, fac1=None):
+    def forward(self, x, w=None):
         out = self.backbone(x)
         if out.size(-1) != 1:
             out = F.relu(out, inplace=True).mean([2, 3])
         else:
             out = out.squeeze()
-        if self.is_gbs:
-            return self.classifer(out, w, fac1)
+        if self.is_nbs:
+            return self.classifer(out, w)
         else:
             return self.classifer(out)
 
@@ -82,9 +86,9 @@ class BackboneGetter(nn.Sequential):
         super().__init__(layers)
 
 
-def gbs_conv(backbone, return_layer, classifier, is_gbs, dropout_rate):
+def nbs_conv(backbone, return_layer, classifier, is_nbs, dropout_rate):
     backbone = BackboneGetter(backbone(dropout_rate), return_layer)
-    model = GbsConvNet(backbone, classifier, is_gbs)
+    model = NbsConvNet(backbone, classifier, is_nbs)
     return model
 
 
@@ -93,7 +97,7 @@ def D(Prob, y1, w1=None, reduce='mean'):
     out = ce(Prob, y1)
     if w1 is None:
         return out.mean()
-    out = out[..., None] * w1
+    out = out * w1
     if reduce == 'mean':
         return out.mean()
     else:

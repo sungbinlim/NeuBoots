@@ -18,7 +18,7 @@ def get_transform(crop_size, padding, cutout_size, is_stl=False):
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(mean, std),
-        CutoutDefault(cutout_size),
+        # CutoutDefault(cutout_size),
     ])
     transform_test = transforms.Compose([
         transforms.ToTensor(),

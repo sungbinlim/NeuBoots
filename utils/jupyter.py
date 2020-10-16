@@ -1,4 +1,5 @@
 import cv2
+from numpy.core.numeric import indices
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,6 +9,11 @@ from scipy.special import softmax
 from torch.distributions.exponential import Exponential
 from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve, average_precision_score
 
+
+def apply_dropout(m):
+    if type(m) == torch.nn.Dropout:
+        m.train()
+        m.p = 0.2
 
 
 def multi_calibration_curve(logits, labels, bins=10, is_softmax=False):
@@ -60,7 +66,7 @@ def plot_multiclass_calibration_curve(probs, labels, bins=10,
     ax[0].plot(np.linspace(0, 1.0, 20), np.linspace(0, 1.0, 20), '--', lw=2,
                alpha=.7, color='gray', label='Perfectly calibrated', zorder=1)
 
-    ax[0].set_title(f'{title} (ECE = {ece[0] * 100:.2f}%)\n', fontsize=fsize)
+    # ax[0].set_title(f'{title} (ECE = {ece[0] * 100:.2f}%)\n', fontsize=fsize)
     ax[0].set_xlim(0.0, 1.0)
     ax[0].set_ylim(0.0, 1.0)
     ax[0].set_ylabel('Accuracy\n', fontsize=fsize)
@@ -87,7 +93,7 @@ def plot_multiclass_calibration_curve(probs, labels, bins=10,
 
 
 @torch.no_grad()
-def infer(loader, model, num_bs, num_classes, fac, with_acc=False, seed=0, is_mlp=False):
+def infer(loader, model, num_bs, num_classes, with_acc=False, with_indice=False, is_mcd=False, seed=0):
     torch.manual_seed(seed)
     model.eval()
     a_test_ = Exponential(torch.ones([1, 400]))
@@ -95,27 +101,34 @@ def infer(loader, model, num_bs, num_classes, fac, with_acc=False, seed=0, is_ml
     acc = 0.
     outputs = np.zeros([num_bs, len(loader.dataset), num_classes + 1])
     beg = 0
-    for i, (img, label) in enumerate(loader):
+    indice = []
+    ret = []
+    for i, (img, label, _) in enumerate(loader):
+        img = img.cuda()
         index = list(range(beg, beg + img.size(0)))
         beg = beg + img.size(0)
         label = label.numpy().reshape(-1, 1)
+        indice += [_]
         for _ in range(num_bs):
             w_test = a_test[_].repeat_interleave(img.shape[0], dim=0)
-            # w_test = a_test_.sample((img.shape[0],))
-            if is_mlp:
-                img = img.view(img.shape[0], -1)
-            output = model(img, w_test, fac).cpu().numpy()
+            if is_mcd:
+                model.apply(apply_dropout)
+            output = model(img, w_test.cuda()).cpu().numpy()
             outputs[_, index] = np.concatenate([output, label], axis=1)
-
+    ret += [outputs]
     if with_acc:
         pred = outputs.sum(0)[:, :-1].argmax(1)
         label = outputs[0][:, -1]
         acc = pred == label
         print(f"[Test] acc : {acc.mean()}")
-    return outputs
+        ret += [acc.mean()]
+
+    if with_indice:
+        ret += [torch.cat(indice)]
+    return ret
 
 
-def odin_infer(loader, model, num_bs, num_classes, fac, with_acc=False, seed=0, T=1000, eps=0.0014):
+def _odin_infer(loader, model, num_bs, num_classes, with_acc=False, seed=0, T=1000, eps=0.0014):
     loss_fn = torch.nn.CrossEntropyLoss()
     torch.manual_seed(seed)
     model.eval()
@@ -132,7 +145,7 @@ def odin_infer(loader, model, num_bs, num_classes, fac, with_acc=False, seed=0, 
             w_test = a_test[_].repeat_interleave(img.shape[0], dim=0)
             img_ = img.cuda()
             img_.requires_grad = True
-            output = model(img_, w_test, fac)
+            output = model(img_, w_test)
 
             output = output / T
             pseudo_label = output.argmax(-1).cuda()
@@ -150,7 +163,53 @@ def odin_infer(loader, model, num_bs, num_classes, fac, with_acc=False, seed=0, 
                                  gradient.index_select(1, torch.LongTensor([2]).cuda()) / (0.2010))
 
             img_new = torch.add(img_.data, -eps, gradient)
-            output_new = model(img_new, w_test, fac).cpu().detach().numpy()
+            output_new = model(img_new, w_test).cpu().detach().numpy()
+            outputs[_, index] = np.concatenate([output_new, label], axis=1)
+    
+    if with_acc:
+        pred = outputs.sum(0)[:, :-1].argmax(1)
+        label = outputs[0][:, -1]
+        acc = pred == label
+        print(f"[Test] acc : {acc.mean()}")
+    return outputs
+
+
+def odin_infer(loader, model, num_bs, num_classes, with_acc=False, seed=0, T=1000, eps=0.0014):
+    loss_fn = torch.nn.CrossEntropyLoss()
+    torch.manual_seed(seed)
+    model.eval()
+    a_test_ = Exponential(torch.ones([1, 400]))
+    a_test = a_test_.sample((num_bs,))
+    acc = 0.
+    outputs = np.zeros([num_bs, len(loader.dataset), num_classes + 1])
+    beg = 0
+    for i, (img, label) in enumerate(loader):
+        index = list(range(beg, beg + img.size(0)))
+        beg = beg + img.size(0)
+        label = label.numpy().reshape(-1, 1)
+        img_ = img.cuda()
+        img_.requires_grad = True
+        output = model(img_, torch.zeros([img.shape[0], 400]))
+
+        output = output / T
+        pseudo_label = output.argmax(-1).cuda()
+        loss = loss_fn(output, pseudo_label)
+        loss.backward()
+
+        gradient = torch.ge(img_.grad.data, 0)
+        gradient = (gradient.float() - 0.5) * 2
+
+        gradient.index_copy_(1, torch.LongTensor([0]).cuda(),
+                                gradient.index_select(1, torch.LongTensor([0]).cuda()) / (0.2023))
+        gradient.index_copy_(1, torch.LongTensor([1]).cuda(),
+                                gradient.index_select(1, torch.LongTensor([1]).cuda()) / (0.1994))
+        gradient.index_copy_(1, torch.LongTensor([2]).cuda(),
+                                gradient.index_select(1, torch.LongTensor([2]).cuda()) / (0.2010))
+
+        img_new = torch.add(img_.data, -eps, gradient)
+        for _ in range(num_bs):
+            w_test = a_test[_].repeat_interleave(img.shape[0], dim=0)
+            output_new = model(img_new, w_test).cpu().detach().numpy()
             outputs[_, index] = np.concatenate([output_new, label], axis=1)
     
     if with_acc:
@@ -367,3 +426,58 @@ def save_fgsm(path, model, img, target, step_size=0.1, fac=1):
         save_path = Path(path)
         save_path.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(save_path), new_img)
+
+
+# ECE
+def calc_ece(softmax, label, bins=15):
+    bin_boundaries = torch.linspace(0, 1, bins + 1)
+    bin_lowers = bin_boundaries[:-1]
+    bin_uppers = bin_boundaries[1:]
+
+    softmax = torch.tensor(softmax)
+    labels = torch.tensor(label)
+
+    softmax_max, predictions = torch.max(softmax, 1)
+    correctness = predictions.eq(labels)
+
+    ece = torch.zeros(1)
+
+    for bin_lower, bin_upper in zip(bin_lowers, bin_uppers):
+        in_bin = softmax_max.gt(bin_lower.item()) * softmax_max.le(bin_upper.item())
+        prop_in_bin = in_bin.float().mean()
+
+        if prop_in_bin.item() > 0.0:
+            accuracy_in_bin = correctness[in_bin].float().mean()
+            avg_confidence_in_bin = softmax_max[in_bin].mean()
+
+            ece += torch.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
+
+    print("ECE {0:.2f} ".format(ece.item()*100))
+
+    return ece.item()
+
+
+# NLL & Brier Score
+def calc_nll_brier(softmax, logit, label, label_onehot):
+    brier_score = np.mean(np.sum((softmax - label_onehot) ** 2, axis=1))
+
+    logit = torch.tensor(logit, dtype=torch.float)
+    label = torch.tensor(label, dtype=torch.int)
+    logsoftmax = torch.nn.LogSoftmax(dim=1)
+
+    log_softmax = logsoftmax(logit)
+    nll = calc_nll(log_softmax, label)
+
+    print("NLL {0:.2f} ".format(nll.item()*10))
+    print('Brier {0:.2f}'.format(brier_score*100))
+
+    return nll.item(), brier_score
+
+
+# Calc NLL
+def calc_nll(log_softmax, label):
+    out = torch.zeros_like(label, dtype=torch.float)
+    for i in range(len(label)):
+        out[i] = log_softmax[i][label[i]]
+
+    return -out.sum()/len(out)
