@@ -31,12 +31,14 @@ def main():
                                     setup['n_a'], setup['cpus'], setup['seed'])
         runner = NbsRunner(data_loader, **arg.module, num_epoch=setup['num_epoch'],
                            logger=logger, model_path=model_path, rank=setup['rank'],
-                           epoch_th=setup['epoch_th'], num_mc=setup['num_mc'])
+                           epoch_th=setup['epoch_th'], num_mc=setup['num_mc'],
+                           adv_training=setup['adv_training'])
     else:
         data_loader = GeneralDataLoader(dataset, setup['batch_size'],
                                         setup['cpus'], setup['seed'])
         runner = CnnRunner(data_loader, **arg.module, num_epoch=setup['num_epoch'],
-                           logger=logger, model_path=model_path, rank=setup['rank'])
+                           logger=logger, model_path=model_path, rank=setup['rank'],
+                           adv_training=setup['adv_training'])
 
     if setup['phase'] == 'train':
         runner.train()
