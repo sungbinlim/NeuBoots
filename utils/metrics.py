@@ -1,4 +1,6 @@
 import torch
+from torch.nn.functional import one_hot
+
 import numpy as np
 from scipy.special import softmax
 
@@ -20,7 +22,20 @@ class NbsLoss(torch.nn.Module):
             return out.sum()
 
 
-class CrossEntropyWithSoftLabel(torch.nn.Module):
+class BrierLoss(torch.nn.Module):
+    def __init__(self, reduction='mean', num_classes=10):
+        super().__init__()
+        self.reduction = reduction
+        self.num_classes = num_classes
+        self.mse = torch.nn.MSELoss(reduction=reduction)
+
+    def forward(self, input, target):
+        target_onehot = one_hot(target, self.num_classes).float()
+        out = self.mse(input, target_onehot)
+        return out
+
+
+class CrossEntropyLossWithSoftLabel(torch.nn.Module):
     def __init__(self, reduction='mean'):
         super().__init__()
         self.reduction = reduction
