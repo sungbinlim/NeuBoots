@@ -32,10 +32,6 @@ module:
     T_max: 200
 
   loss: [NbsLoss]
-  loss_args:
-    NbsLoss:
-      num_classes: 10
-      reduction: mean
   loss_weight: [1.]
   val_metric: Accuracy
   test_metric: Accuracy
