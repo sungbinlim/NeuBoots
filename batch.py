@@ -9,7 +9,7 @@ def run(str):
 
 
 def main():
-    strs = [f"python -m torch.distributed.launch --nproc_per_node=1 main.py test --gpus {i%8} --seed {i}" for i in range(40)]
+    strs = [f"python -m torch.distributed.launch --nproc_per_node=1 main.py deep --gpus {i%8} --seed {i}" for i in range(40)]
     processes = []
     for i in range(5):
         for rank in range(8):
