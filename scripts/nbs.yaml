@@ -1,0 +1,40 @@
+path:
+  dataset: cifar10
+  postfix: "10_40_400"
+
+setup:
+  model_type: nbs
+  batch_size: 128
+  cpus: 4
+  gpus: "0"
+  seed: 0
+  num_epoch: 200
+  phase: train
+  epoch_th: 10
+  num_mc: 40
+  n_a: 400
+
+module:
+  model:
+    name: resnet34
+    num_classes: 10
+    dropout_rate: 0.0
+
+  optim:
+    name: SGD
+    lr: 0.1
+    momentum: 0.9
+    nesterov: True
+    weight_decay: 0.0005
+
+  lr_scheduler:
+    name: CosineAnnealingLR
+    T_max: 200
+
+  loss: [NbsLoss]
+  loss_weight: [1.]
+  val_metric: Accuracy
+  test_metric: Accuracy
+  metric_args:
+    nlabels: 10
+    reduction: none
