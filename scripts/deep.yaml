@@ -1,18 +1,16 @@
 path:
   dataset: cifar10
-  postfix: "10_40_400"
+  postfix: celoss
 
 setup:
-  model_type: nbs
+  model_type: deep
   batch_size: 128
   cpus: 4
   gpus: "0"
   seed: 0
   num_epoch: 200
   phase: train
-  epoch_th: 10
-  num_mc: 40
-  n_a: 400
+  adv_training: True
 
 module:
   model:
@@ -31,10 +29,10 @@ module:
     name: CosineAnnealingLR
     T_max: 200
 
-  loss: [NbsLoss]
+  loss: [CrossEntropyLoss]
   loss_args:
-    NbsLoss:
-      num_classes: 10
+    CrossEntropyLoss:
+      # num_classes: 10
       reduction: mean
   loss_weight: [1.]
   val_metric: Accuracy
