@@ -6,16 +6,17 @@ import shutil
 import numpy as np
 from tqdm import tqdm
 
-from utils.metrics import calc_ece, calc_nll_brier
+from utils.metrics import calc_ece, calc_nll_brier, VATLoss
 from runners.base_runner import BaseRunner, reduce_tensor, gather_tensor
 
 
 class CnnRunner(BaseRunner):
-    def __init__(self, loader, model, optim, lr_scheduler, num_epoch,
-                 loss_with_weight, val_metric, test_metric, logger, model_path, rank):
+    def __init__(self, loader, model, optim, lr_scheduler, num_epoch, loss_with_weight,
+                 val_metric, test_metric, logger, model_path, rank, adv_training):
         self.num_epoch = num_epoch
         self.epoch = 0
         self.loss_with_weight = loss_with_weight
+        self.adv_training = adv_training
         self.val_metric = val_metric
         self.test_metric = test_metric
         self.optim = optim
@@ -27,6 +28,7 @@ class CnnRunner(BaseRunner):
         self.load()
 
     def _calc_loss(self, img, label):
+        self.model.train()
         output = self.model(img.cuda(non_blocking=True))
         label = label.cuda(non_blocking=True)
         loss_ = 0
@@ -35,15 +37,35 @@ class CnnRunner(BaseRunner):
             loss_ += _loss
         return loss_
 
-    def _train_a_batch(self, batch):
-        self.model.train()
-        loss = self._calc_loss(*batch)
-        self.optim.zero_grad()
+    def fgsm(self, img, label):
+        step_size = 0.01
+        loss_fn = torch.nn.CrossEntropyLoss()
+        img = img.cuda()
+        img.requires_grad = True
+        self.model.eval()
+        self.model.zero_grad()
+        output = self.model(img)
+        loss = loss_fn(output, label.cuda())
         loss.backward()
-        self.optim.step()
+        grad_sign = img.grad.sign()
+        img_new = img + step_size * grad_sign
+        return img_new.cpu().detach()
 
-        _loss = reduce_tensor(loss, True).item()
-        return _loss
+    def _train_a_batch(self, batch):
+        with torch.autograd.set_detect_anomaly(True):
+            loss = self._calc_loss(*batch)
+            self.optim.zero_grad()
+            loss.backward()
+            self.optim.step()
+            if self.adv_training:
+                img_new = self.fgsm(*batch)
+                loss = self._calc_loss(img_new, *batch[1:])
+                self.optim.zero_grad()
+                loss.backward()
+                self.optim.step()
+
+            _loss = reduce_tensor(loss, True).item()
+            return _loss
 
     @torch.no_grad()
     def _valid_a_batch(self, img, label, with_output=False):
