@@ -6,7 +6,7 @@ import shutil
 import numpy as np
 from tqdm import tqdm
 
-from utils.metrics import calc_ece, calc_nll_brier, VATLoss
+from utils.metrics import calc_ece, calc_nll_brier
 from runners.base_runner import BaseRunner, reduce_tensor, gather_tensor
 
 
