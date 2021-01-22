@@ -9,17 +9,18 @@ class NbsLoss(torch.nn.Module):
     def __init__(self, reduction='mean'):
         super().__init__()
         self.reduction = reduction
-        self.ce = torch.nn.CrossEntropyLoss(reduction='none')
+        self.base_loss = torch.nn.CrossEntropyLoss(reduction='none')
 
-    def forward(self, input, target, w1=None):
-        out = self.ce(input, target)
-        if w1 is None:
-            return out.mean()
-        out = out * w1
+    def forward(self, input, target, w=None):
+        out = self.base_loss(input, target)
+        if w is not None:
+            out = out * w
         if self.reduction == 'mean':
             return out.mean()
-        else:
+        elif self.reduction == 'sum':
             return out.sum()
+        else:
+            return out
 
 
 class BrierLoss(torch.nn.Module):
