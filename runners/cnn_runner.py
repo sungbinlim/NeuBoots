@@ -52,20 +52,19 @@ class CnnRunner(BaseRunner):
         return img_new.cpu().detach()
 
     def _train_a_batch(self, batch):
-        with torch.autograd.set_detect_anomaly(True):
-            loss = self._calc_loss(*batch)
+        loss = self._calc_loss(*batch)
+        self.optim.zero_grad()
+        loss.backward()
+        self.optim.step()
+        if self.adv_training:
+            img_new = self.fgsm(*batch)
+            loss = self._calc_loss(img_new, *batch[1:])
             self.optim.zero_grad()
             loss.backward()
             self.optim.step()
-            if self.adv_training:
-                img_new = self.fgsm(*batch)
-                loss = self._calc_loss(img_new, *batch[1:])
-                self.optim.zero_grad()
-                loss.backward()
-                self.optim.step()
 
-            _loss = reduce_tensor(loss, True).item()
-            return _loss
+        _loss = reduce_tensor(loss, True).item()
+        return _loss
 
     @torch.no_grad()
     def _valid_a_batch(self, img, label, with_output=False):
