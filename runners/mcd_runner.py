@@ -6,7 +6,6 @@ from scipy.special import softmax
 import h5py
 import numpy as np
 from tqdm import tqdm
-from time import time
 from pathlib import Path
 
 from utils.metrics import calc_ece, calc_nll_brier, calc_nll_brier_mc
@@ -14,43 +13,30 @@ from runners.base_runner import gather_tensor
 from runners.cnn_runner import CnnRunner
 
 
-class NbsRunner(CnnRunner):
+def apply_dropout(m):
+    if type(m) == torch.nn.Dropout:
+        m.train()
+
+
+class McdRunner(CnnRunner):
     def __init__(self, loader, model, optim, lr_scheduler, num_epoch,
                  loss_with_weight, val_metric, test_metric, logger,
-                 model_path, rank, epoch_th, num_mc, adv_training):
+                 model_path, rank, num_mc, adv_training):
         self.num_mc = num_mc
-        self.n_a = loader.n_a
-        self.epoch_th = epoch_th
-        self.alpha = torch.ones([1, self.n_a])
         super().__init__(loader, model, optim, lr_scheduler, num_epoch, loss_with_weight,
                          val_metric, test_metric, logger, model_path, rank, adv_training)
-        self.save_kwargs['alpha'] = self.alpha
-        self._update_weight()
-
-    def _update_weight(self):
-        if self.epoch > self.epoch_th:
-            self.alpha = Exponential(torch.ones([1, self.n_a])).sample()
-
-    def _calc_loss(self, img, label, idx):
-        n0 = img.size(0)
-        w = self.alpha[0, idx].cuda()
-
-        output = self.model(img.cuda(non_blocking=True),
-                            self.alpha.repeat_interleave(n0, 0))
-        for _ in range(output.dim() - w.dim()):
-            w.unsqueeze_(-1)
-        label = label.cuda(non_blocking=True)
-        loss_ = 0
-        for loss, _w in self.loss_with_weight:
-            _loss = _w * loss(output, label, w)
-            loss_ += _loss
-        return loss_
 
     @torch.no_grad()
     def _valid_a_batch(self, img, label, with_output=False):
-        self._update_weight()
         self.model.eval()
-        output = self.model(img.cuda(non_blocking=True), self.num_mc)
+        self.model.apply(apply_dropout)
+        if label.dim() == 3:
+            output = torch.zeros([self.num_mc, img.size(0), self.num_classes,
+                                img.size(-2), img.size(-1)]).cuda()
+        else:
+            output = torch.zeros([self.num_mc, img.size(0), self.num_classes]).cuda()
+        for i in range(self.num_mc):
+            output[i] += self.model(img.cuda(non_blocking=True))
         label = label.cuda(non_blocking=True)
         result = self.val_metric(output.mean(0), label)
         if with_output:
@@ -69,10 +55,11 @@ class NbsRunner(CnnRunner):
         labels = []
         metrics = []
         self.model.eval()
+        self.model.apply(apply_dropout)
         for img, label in t_iter:
             _metric, output = self._valid_a_batch(img, label, with_output=True)
-            labels += [gather_tensor(label).cpu().numpy()]
             outputs += [gather_tensor(output).cpu().numpy()]
+            labels += [gather_tensor(label).cpu().numpy()]
             metrics += [gather_tensor(_metric).cpu().numpy()]
         if is_seg:
             met = np.concatenate(metrics).mean()
@@ -94,7 +81,7 @@ class NbsRunner(CnnRunner):
             outputs = np.concatenate(outputs, axis=1)
             acc = (outputs.mean(0).argmax(-1) == labels).mean() * 100
             ece = calc_ece(softmax(outputs, -1).mean(0), labels)
-            nll, brier = calc_nll_brier_mc(outputs, labels)
+            nll, brier = calc_nll_brier_mc(outputs, labels, self.num_classes)
             log = f"[Test] ACC: {acc:.2f}, ECE : {ece:.2f}, "
             log += f"NLL : {nll:.2f}, Brier : {brier:.2f}"
             self.log(log, 'info')

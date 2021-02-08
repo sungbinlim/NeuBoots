@@ -8,6 +8,7 @@ class BaseRunner(object):
     def __init__(self, loader, model, logger, model_path, rank):
         self.loader = loader
         self.model = model
+        self.num_classes = model.module.classifer.num_classes
         self.logger = logger
         self.model_path = Path(model_path)
         self.model_path.mkdir(parents=True, exist_ok=True)

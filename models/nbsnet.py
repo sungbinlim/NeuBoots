@@ -27,36 +27,42 @@ class NbsCls(nn.Module):
             return self.fc_out(out1 * out2)
 
 
-class NbsConvNet(nn.Module):
-    def __init__(self, backbone, classifier):
-        super().__init__()
-        self.backbone = backbone
-        self.classifer = classifier
-
-    def forward(self, x, w=None):
-        out = self.backbone(x)
-        if out.size(-1) != 1:
-            out = F.relu(out, inplace=True).mean([2, 3])
-        else:
-            out = out.squeeze()
-        return self.classifer(out, w)
-
-
-class GeneralConvNet(nn.Module):
+class ConvNet(nn.Module):
     def __init__(self, backbone, classifier, last_drop=.0):
         super().__init__()
         self.backbone = backbone
-        self.fc = classifier
+        self.classifer = classifier
         self.dropout = nn.Dropout(p=last_drop)
 
-    def forward(self, x):
-        out = self.backbone(x)
+    def forward(self, *x):
+        x = list(x)
+        out = self.backbone(x[0])
         if out.size(-1) != 1:
             out = F.relu(out, inplace=True).mean([2, 3])
         else:
             out = out.squeeze()
         out = self.dropout(out)
-        return self.fc(out)
+        x[0] = out
+        return self.classifer(*x)
+
+
+class SegNet(nn.Module):
+    def __init__(self, backbone, classifier):
+        super().__init__()
+        self.bacbone = backbone
+        self.classifer = classifier
+
+    def forward(self, *x):
+        x = list(x)
+        input_shape = x[0].shape[-2:]
+        out = self.bacbone(x[0])
+        x[0] = out
+        out = self.classifer(*x)
+        if out.dim() != 5:
+            return F.interpolate(out, size=input_shape,
+                                 mode='bilinear', align_corners=False)
+        else:
+            return out
 
 
 class BackboneGetter(nn.Sequential):
@@ -85,12 +91,15 @@ class BackboneGetter(nn.Sequential):
 
 
 def get_conv(backbone, return_layer, classifier, model_type, drop_rate=0.0):
-    if model_type == 'mcd':
-        backbone = BackboneGetter(backbone(drop_rate), return_layer)
+    if 'seg' in model_type:
+        backbone = BackboneGetter(backbone(
+            replace_stride_with_dilation=[False, True, True]
+        ), return_layer)
+        model = SegNet(backbone, classifier)
     else:
-        backbone = BackboneGetter(backbone(.0), return_layer)
-    if model_type == 'nbs':
-        model = NbsConvNet(backbone, classifier)
-    else:
-        model = GeneralConvNet(backbone, classifier, drop_rate)
+        if model_type == 'mcd':
+            backbone = BackboneGetter(backbone(drop_rate), return_layer)
+        else:
+            backbone = BackboneGetter(backbone(.0), return_layer)
+        model = ConvNet(backbone, classifier, drop_rate)
     return model

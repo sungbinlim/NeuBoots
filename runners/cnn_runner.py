@@ -4,9 +4,11 @@ from torch.nn.functional import one_hot
 import h5py
 import shutil
 import numpy as np
+from pathlib import Path
 from tqdm import tqdm
+from time import time
 
-from utils.metrics import calc_ece, calc_nll_brier
+from utils.metrics import calc_ece, calc_nll_brier, BrierLoss
 from runners.base_runner import BaseRunner, reduce_tensor, gather_tensor
 
 
@@ -39,7 +41,8 @@ class CnnRunner(BaseRunner):
 
     def fgsm(self, img, label):
         step_size = 0.01
-        loss_fn = torch.nn.CrossEntropyLoss()
+        # loss_fn = torch.nn.CrossEntropyLoss()
+        loss_fn = self.loss_with_weight[0][0]
         img = img.cuda()
         img.requires_grad = True
         self.model.eval()
@@ -52,16 +55,13 @@ class CnnRunner(BaseRunner):
         return img_new.cpu().detach()
 
     def _train_a_batch(self, batch):
+        if self.adv_training:
+            img_new = self.fgsm(*batch)
+            batch[0] = img_new
         loss = self._calc_loss(*batch)
         self.optim.zero_grad()
         loss.backward()
         self.optim.step()
-        if self.adv_training:
-            img_new = self.fgsm(*batch)
-            loss = self._calc_loss(img_new, *batch[1:])
-            self.optim.zero_grad()
-            loss.backward()
-            self.optim.step()
 
         _loss = reduce_tensor(loss, True).item()
         return _loss
@@ -86,13 +86,17 @@ class CnnRunner(BaseRunner):
             else:
                 t_iter = loader
             losses = 0
+            times = []
             for i, batch in enumerate(t_iter):
+                t = time()
                 loss = self._train_a_batch(batch)
+                times += [time() - t]
                 losses += loss
                 if self.rank == 0:
                     t_iter.set_postfix(loss=f"{loss:.4} / {losses/(i+1):.4}")
 
             self.log(f"[Train] epoch:{epoch} loss:{losses/(i+1)}", 'info')
+            print("Batch Training Time : ", np.mean(times))
             self.lr_scheduler.step()
             self.val(epoch)
 
@@ -110,7 +114,7 @@ class CnnRunner(BaseRunner):
         if self.rank == 0:
             self.save(epoch, acc, **self.save_kwargs)
 
-    def test(self):
+    def test(self, is_seg):
         self.load('model.pth')
         loader = self.loader.load('test')
         if self.rank == 0:
@@ -120,23 +124,41 @@ class CnnRunner(BaseRunner):
 
         outputs = []
         labels = []
+        metrics = []
         self.model.eval()
         for img, label in t_iter:
-            _, output = self._valid_a_batch(img, label, with_output=True)
-            outputs += [gather_tensor(output).cpu().numpy()]
+            _metric, output = self._valid_a_batch(img, label, with_output=True)
             labels += [gather_tensor(label).cpu().numpy()]
-        labels = np.concatenate(labels)
-        outputs = np.concatenate(outputs, axis=0)
-        acc = (outputs.argmax(1) == labels).mean() * 100
-        ece = calc_ece(outputs, labels)
-        nll, brier = calc_nll_brier(outputs, labels, one_hot(torch.from_numpy(labels.astype(int)),
-                                    self.model.module.fc.out_features).numpy())
-        log = f"[Test] ACC: {acc:.2f}, ECE : {ece:.2f}, "
-        log += f"NLL : {nll:.2f}, Brier : {brier:.2f}"
-        self.log(log, 'info')
-        with h5py.File(f"{self.model_path}/output.h5", 'w') as h:
-            h.create_dataset('output', data=outputs)
-            h.create_dataset('label', data=labels)
+            outputs += [gather_tensor(output).cpu().numpy()]
+            metrics += [gather_tensor(_metric).cpu().numpy()]
+        if is_seg:
+            met = np.concatenate(metrics).mean()
+            self.log(f"[Test] MeanIOU: {met:.2f}", 'info')
+            save_path = Path(self.model_path) / 'infer'
+            save_path.mkdir(parents=True, exist_ok=True)
+            index = 0
+            for out, label in zip(outputs, labels):
+                for i in range(label.shape[0]):
+                    l = label[i]
+                    o = out[i]
+
+                    with h5py.File(f"{save_path}/{index}.h5", 'w') as h:
+                        h.create_dataset('output', data=o)
+                        h.create_dataset('label', data=l)
+                    index += 1
+        else:
+            labels = np.concatenate(labels)
+            outputs = np.concatenate(outputs, axis=0)
+            acc = (outputs.argmax(1) == labels).mean() * 100
+            ece = calc_ece(outputs, labels)
+            nll, brier = calc_nll_brier(outputs, labels, self.num_classes)
+            log = f"[Test] ACC: {acc:.2f}, ECE : {ece:.2f}, "
+            log += f"NLL : {nll:.2f}, Brier : {brier:.2f}"
+            self.log(log, 'info')
+            with h5py.File(f"{self.model_path}/output.h5", 'w') as h:
+                h.create_dataset('output', data=outputs)
+                h.create_dataset('label', data=labels)
+
 
     def save(self, epoch, metric, file_name="model", **kwargs):
         torch.save({"epoch": epoch,

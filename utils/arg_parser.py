@@ -43,7 +43,8 @@ class Argments(object):
                 if self['setup/phase'] != 'infer':
                     module['optim'] = self._module_load(v, part='optim',
                                                         params=module['model'].parameters())
-                    module['model'] = DistributedDataParallel(module['model'])
+                    module['model'] = DistributedDataParallel(module['model'],
+                                                              [self['setup/rank']])
                     module['lr_scheduler'] = self._module_load(v, part='lr_scheduler',
                                                                optimizer=module['optim'])
                     loss = [eval(l)(**v['loss_args'][l]) for l in v['loss']]
@@ -51,7 +52,8 @@ class Argments(object):
                     module['val_metric'] = eval(v['val_metric'])(**v['metric_args'])
                     module['test_metric'] = eval(v['test_metric'])(**v['metric_args'])
                 else:
-                    module['model'] = DistributedDataParallel(module['model'])
+                    module['model'] = DistributedDataParallel(module['model'],
+                                                              [self['setup/rank']])
 
     def __init__(self, yaml_file, cmd_args):
         self.file_name = yaml_file
@@ -59,14 +61,15 @@ class Argments(object):
         if cmd_args.gpus != "-1":
             self['setup/gpus'] = cmd_args.gpus
         os.environ["CUDA_VISIBLE_DEVICES"] = self["setup/gpus"]
-        if cmd_args.seed != -1:
-            self['setup/seed'] = cmd_args.seed
+        self['setup/index'] = cmd_args.index
         self['setup/phase'] = cmd_args.phase
         self['setup/local_rank'] = cmd_args.local_rank
 
         world_size = len(self["setup/gpus"].replace(',', "").replace("'", ""))
         model_path = f"outs/{self['setup/model_type']}/{self['module/model/name']}"
-        model_path += f"/{self['path/dataset']}_{self['setup/seed']}"
+        model_path += f"/{self['path/dataset']}"
+        if self['setup/index'] != -1:
+            model_path += f"_{self['setup/index']}"
         if self['path/postfix'] != 'none':
             model_path += f"_{self['path/postfix']}"
         self['path/model_path'] = model_path

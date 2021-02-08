@@ -8,6 +8,7 @@ from .resnet_ca import resnet110
 from .densenet import densenet100
 from .densenet_ca import dense_bc
 from .nbsnet import get_conv, NbsCls
+from .deeplabv3 import NbsDeepLabHead, GeneralDeepLabHead
 from .wideresnet import wresnet28_2, wresnet28_10, wresnet16_8
 
 
@@ -24,15 +25,22 @@ MODEL_DICT = {'mlp': [None, 'none', 28 * 28 * 3],
               'mnasnet0_5': [models.mnasnet0_5, 'layers', 1280],
               'wresnet28_2': [wresnet28_2, 'avgpool', 128],
               'wresnet16_8': [wresnet16_8, 'avgpool', 512],
-              'wresnet28_10': [wresnet28_10, 'avgpool', 640]}
+              'wresnet28_10': [wresnet28_10, 'avgpool', 640],
+              'deeplabv3_res50': [models.resnet.resnet50, 'layer4', 2048],
+              'deeplabv3_res101': [models.resnet.resnet101, 'layer4', 2048]}
 
 
 def _get_model(name, model_type, num_classes, dropout_rate=0.):
     backbone, return_layer, in_feat = MODEL_DICT[name]
     if model_type == 'nbs':
         classifier = NbsCls(in_feat, num_classes)
+    elif model_type == 'nbs_seg':
+        classifier = NbsDeepLabHead(in_feat, num_classes)
+    elif 'seg' in model_type:
+        classifier = GeneralDeepLabHead(in_feat, num_classes)
     else:
         classifier = torch.nn.Linear(in_feat, num_classes)
+        classifier.num_classes = num_classes
     if backbone:
         return get_conv(backbone, return_layer, classifier, model_type, dropout_rate)
     else:
