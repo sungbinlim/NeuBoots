@@ -3,13 +3,14 @@ path:
   postfix: none
 
 setup:
-  model_type: base
+  model_type: mcd
   batch_size: 128
-  cpus: 4
-  gpus: "1"
+  cpus: 32
+  gpus: "0"
   seed: 0
-  num_epoch: 2
+  num_epoch: 200
   phase: train
+  num_mc: 5
   adv_training: False
 
 module:
@@ -20,10 +21,10 @@ module:
 
   optim:
     name: SGD
-    lr: 0.05
+    lr: 0.1
     momentum: 0.9
     nesterov: True
-    weight_decay: 0.001
+    weight_decay: 0.0005
 
   lr_scheduler:
     name: CosineAnnealingLR

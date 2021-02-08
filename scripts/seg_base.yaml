@@ -1,29 +1,32 @@
 path:
-  dataset: cifar100
+  dataset: voc
   postfix: none
 
 setup:
-  model_type: base
-  batch_size: 128
+  model_type: seg
+  batch_size: 30
   cpus: 4
-  gpus: "1"
+  gpus: "4,5"
   seed: 0
-  num_epoch: 2
+  num_epoch: 200
   phase: train
+  epoch_th: 0
+  num_mc: 100
+  n_a: 256
   adv_training: False
 
 module:
   model:
-    name: densebc
-    num_classes: 100
-    dropout_rate: 0.2
+    name: deeplabv3_res101
+    num_classes: 21
+    # dropout_rate: 0.0
 
   optim:
     name: SGD
-    lr: 0.05
+    lr: 0.001
     momentum: 0.9
     nesterov: True
-    weight_decay: 0.001
+    weight_decay: 0.0005
 
   lr_scheduler:
     name: CosineAnnealingLR
@@ -34,8 +37,8 @@ module:
     CrossEntropyLoss:
       reduction: mean
   loss_weight: [1.]
-  val_metric: Accuracy
-  test_metric: Accuracy
+  val_metric: MeanIOU 
+  test_metric: MeanIOU
   metric_args:
-    nlabels: 100
+    nlabels: 21
     reduction: none

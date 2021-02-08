@@ -1,21 +1,21 @@
 path:
-  dataset: cifar10
-  postfix: celoss
+  dataset: cifar100
+  postfix: test
 
 setup:
   model_type: deep
   batch_size: 128
   cpus: 4
-  gpus: "0"
+  gpus: "2"
   seed: 0
-  num_epoch: 200
+  num_epoch: 2
   phase: train
   adv_training: True
 
 module:
   model:
-    name: resnet34
-    num_classes: 10
+    name: densebc
+    num_classes: 100
     dropout_rate: 0.0
 
   optim:
@@ -29,14 +29,16 @@ module:
     name: CosineAnnealingLR
     T_max: 200
 
-  loss: [CrossEntropyLoss]
+  # loss: [CrossEntropyLoss]
+    # CrossEntropyLoss:
+  loss: [BrierLoss]
   loss_args:
-    CrossEntropyLoss:
-      # num_classes: 10
+    BrierLoss:
+      num_classes: 100
       reduction: mean
   loss_weight: [1.]
   val_metric: Accuracy
   test_metric: Accuracy
   metric_args:
-    nlabels: 10
+    nlabels: 100
     reduction: none

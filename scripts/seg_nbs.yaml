@@ -1,32 +1,32 @@
 path:
-  dataset: svhn
-  postfix: "test"
+  dataset: voc
+  postfix: none
 
 setup:
-  model_type: nbs
-  batch_size: 128
-  cpus: 32
-  gpus: "5"
+  model_type: nbs_seg
+  batch_size: 30
+  cpus: 4
+  gpus: "2"
   seed: 0
-  num_epoch: 2
+  num_epoch: 200
   phase: train
   epoch_th: 0
   num_mc: 5
-  n_a: 512
+  n_a: 256
   adv_training: False
 
 module:
   model:
-    name: resnet34
-    num_classes: 10
-    dropout_rate: 0.0
+    name: deeplabv3_res50
+    num_classes: 21
+    # dropout_rate: 0.0
 
   optim:
     name: SGD
-    lr: 0.05
+    lr: 0.001
     momentum: 0.9
     nesterov: True
-    weight_decay: 0.001
+    weight_decay: 0.0005
 
   lr_scheduler:
     name: CosineAnnealingLR
@@ -37,8 +37,8 @@ module:
     NbsLoss:
       reduction: mean
   loss_weight: [1.]
-  val_metric: Accuracy
-  test_metric: Accuracy
+  val_metric: MeanIOU
+  test_metric: MeanIOU
   metric_args:
-    nlabels: 10
+    nlabels: 21
     reduction: none
