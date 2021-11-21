@@ -1,6 +1,6 @@
 # NeuBoots
 
-This repository contains an official implementation of the [Neural Bootstrapper](https://papers.nips.cc/paper/2021/hash/8abfe8ac9ec214d68541fcb888c0b4c3-Abstract.html).
+This repository contains an official implementation of the [Neural Bootstrapper (NeurIPS 2021)](https://papers.nips.cc/paper/2021/hash/8abfe8ac9ec214d68541fcb888c0b4c3-Abstract.html).
 
 ## Prerequsites
 
