@@ -1,6 +1,6 @@
 # NeuBoots
 
-This repository contains an official implementation of the [Neural Bootstrapper](https://arxiv.org/abs/2010.01051).
+This repository contains an official implementation of the [Neural Bootstrapper](https://papers.nips.cc/paper/2021/hash/8abfe8ac9ec214d68541fcb888c0b4c3-Abstract.html).
 
 ## Prerequsites
 
@@ -52,4 +52,14 @@ epoch_th = 30
 #### SVHN
 ```sh
 ➜ python main.py cutout/svhn
+```
+
+## Citation
+```
+@inproceedings{neuboots2021,
+  title={Neural Bootstrapper},
+  author={Shin, Minsuk and Cho, Hyungjoo and Min, Hyun-seok and Lim, Sungbin},
+  booktitle={Thirty-Fifth Conference on Neural Information Processing Systems},
+  year={2021}
+}
 ```
